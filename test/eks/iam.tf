@@ -1,35 +1,25 @@
-data "aws_iam_policy_document" "vpc-cni" {
-  statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRoleWithWebIdentity"]
-    principals {
-      type        = "Federated"
-      identifiers = [module.eks.oidc_provider_arn]
-    }
-    condition {
-      test     = "StringEquals"
-      variable = "${trimprefix(module.eks.cluster_oidc_issuer_url, "https://")}:aud"
-      values   = ["sts.amazonaws.com"]
-    }
-    condition {
-      test     = "StringEquals"
-      variable = "${trimprefix(module.eks.cluster_oidc_issuer_url, "https://")}:sub"
-      values   = ["system:serviceaccount:kube-system:aws-node"]
+module "controller_iam_role_with_eks_oidc" {
+  source  = "terraform-aws-modules/iam/aws//wrappers/iam-role-for-service-accounts-eks"
+  version = "5.52.2"
+
+  defaults = {
+    create_role = true
+  }
+  items = {
+    vpc-cni = {
+      role_name                      = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "vpc-cni")
+      role_description               = "iam role for vpc-cni irsa"
+      tags                           = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "vpc-cni") }
+      attach_vpc_cni_policy          = true
+      vpc_cni_enable_cloudwatch_logs = false
+      vpc_cni_enable_ipv4            = true
+      vpc_cni_enable_ipv6            = false
+      oidc_providers = {
+        eks_20250220 = {
+          provider_arn               = module.eks.oidc_provider_arn
+          namespace_service_accounts = ["kube-system:aws-node"]
+        }
+      }
     }
   }
-}
-
-resource "aws_iam_role" "vpc-cni" {
-  name               = "psy-playground-test-role"
-  assume_role_policy = data.aws_iam_policy_document.vpc-cni.json
-}
-
-resource "aws_iam_role_policy_attachment" "vpc-cni" {
-  role       = aws_iam_role.vpc-cni.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-}
-
-module "iam_policy" {
-  source  = "terraform-aws-modules/eks/aws"
-  version = "5.52.2"
 }
