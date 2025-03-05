@@ -153,33 +153,33 @@ module "eks" {
   depends_on = [aws_route_table_association.pri-1, aws_route_table_association.pri-2]
 }
 
-# module "karpenter" {
-#   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-#   version = "20.33.1"
+module "karpenter" {
+  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+  version = "20.33.1"
 
-#   create              = true
-#   create_access_entry = false
-#   cluster_name        = module.eks.cluster_name
-#   # spot instance interruption handler config
-#   enable_spot_termination   = true
-#   queue_name                = format("%s-%s-%s-sqs-karpenter", local.corp, local.environment, local.product)
-#   queue_managed_sse_enabled = true
-#   # karpenter node iam role
-#   create_instance_profile = false
-#   create_node_iam_role    = false
-#   node_iam_role_arn       = module.eks.eks_managed_node_groups["common-node-group"].iam_role_arn
-#   # karpenter pod iam role
-#   create_iam_role                 = true
-#   enable_irsa                     = true
-#   enable_pod_identity             = false
-#   enable_v1_permissions           = true
-#   iam_policy_name                 = format("%s-%s-%s-policy-karpenter", local.corp, local.environment, local.product)
-#   iam_policy_use_name_prefix      = true
-#   iam_policy_description          = "iam policy for karpenter irsa"
-#   iam_role_name                   = format("%s-%s-%s-role-karpenter", local.corp, local.environment, local.product)
-#   iam_role_use_name_prefix        = false
-#   iam_role_description            = "iam role for karpenter irsa"
-#   iam_role_tags                   = { Name = format("%s-%s-%s-role-karpenter", local.corp, local.environment, local.product) }
-#   irsa_namespace_service_accounts = ["kube-system:karpenter-sa"]
-#   irsa_oidc_provider_arn          = module.eks.oidc_provider_arn
-# }
+  create              = true
+  create_access_entry = false
+  cluster_name        = module.eks.cluster_name
+  # spot instance interruption handler config
+  enable_spot_termination   = true
+  queue_name                = format("%s-%s-%s-sqs-karpenter", local.corp, local.environment, local.product)
+  queue_managed_sse_enabled = true
+  # karpenter node iam role
+  create_instance_profile = false
+  create_node_iam_role    = false
+  node_iam_role_arn       = module.eks.eks_managed_node_groups["common-node-group"].iam_role_arn
+  # karpenter pod iam role
+  create_iam_role                 = true
+  enable_irsa                     = true
+  enable_pod_identity             = false
+  enable_v1_permissions           = true
+  iam_policy_name                 = format("%s-%s-%s-policy-karpenter", local.corp, local.environment, local.product)
+  iam_policy_use_name_prefix      = true
+  iam_policy_description          = "iam policy for karpenter irsa"
+  iam_role_name                   = format("%s-%s-%s-role-karpenter", local.corp, local.environment, local.product)
+  iam_role_use_name_prefix        = false
+  iam_role_description            = "iam role for karpenter irsa"
+  iam_role_tags                   = { Name = format("%s-%s-%s-role-karpenter", local.corp, local.environment, local.product) }
+  irsa_namespace_service_accounts = ["kube-system:karpenter-sa"]
+  irsa_oidc_provider_arn          = module.eks.oidc_provider_arn
+}
