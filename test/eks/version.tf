@@ -6,17 +6,31 @@ terraform {
       source  = "hashicorp/aws"
       version = "5.87.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "2.36.0"
+    }
   }
 }
 
 provider "aws" {
-  alias   = "playground"
-  region  = "ap-northeast-2"
-  profile = "playground"
+  region  = local.region
+  profile = local.profile
 
   default_tags {
     tags = {
       CreatedBy = "seyeol.pyo@kurlycorp.com"
     }
+  }
+}
+
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1alpha1"
+    command     = "aws"
+    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", local.region, "--profile", local.profile]
   }
 }
