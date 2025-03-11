@@ -195,7 +195,7 @@ resource "helm_release" "metrics-server" {
   recreate_pods         = false
   render_subchart_notes = true
   skip_crds             = false
-  timeout               = 600
+  timeout               = 300
   # upgrade_install       = false
   wait          = true
   wait_for_jobs = true
