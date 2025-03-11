@@ -177,3 +177,35 @@ module "karpenter" {
   irsa_namespace_service_accounts = ["kube-system:karpenter-sa"]
   irsa_oidc_provider_arn          = module.eks.oidc_provider_arn
 }
+
+resource "helm_release" "metrics-server" {
+  # target chart info
+  repository = "https://kubernetes-sigs.github.io/metrics-server/"
+  chart      = "metrics-server"
+  version    = "3.12.2"
+  # deployment info
+  name             = "metrics-server"
+  create_namespace = false
+  namespace        = ""
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  render_subchart_notes = true
+  skip_crds             = false
+  timeout               = 600
+  # upgrade_install       = false
+  wait          = true
+  wait_for_jobs = true
+  # chart custom values
+  values = [
+    templatefile(
+      "${path.module}/helm/metrics-server.yaml",
+      {
+
+      }
+    )
+  ]
+}
