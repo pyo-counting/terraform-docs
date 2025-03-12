@@ -28,7 +28,7 @@ resource "aws_subnet" "main" {
   cidr_block                                  = each.value.cidr_block
   enable_resource_name_dns_a_record_on_launch = true
   map_public_ip_on_launch                     = false
-  private_dns_hostname_type_on_launch         = "resource-name"
+  private_dns_hostname_type_on_launch         = "ip-name"
   vpc_id                                      = aws_vpc.main.id
 }
 

@@ -1,3 +1,5 @@
+data "aws_region" "current" {}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "20.33.1"
@@ -71,7 +73,7 @@ module "eks" {
   }
   node_security_group_additional_rules = {
     # ingress
-    local-vpc = { type = "ingress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["172.27.0.0/19"], description = "from local vpc" }
+    local_vpc = { type = "ingress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["172.27.0.0/19"], description = "from local vpc" }
     # egress
     any = { type = "egress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"], description = "to any" }
   }
@@ -178,33 +180,67 @@ module "karpenter" {
   irsa_oidc_provider_arn          = module.eks.oidc_provider_arn
 }
 
-resource "helm_release" "metrics-server" {
-  # target chart info
-  repository = "https://kubernetes-sigs.github.io/metrics-server/"
-  chart      = "metrics-server"
-  version    = "3.12.2"
+resource "helm_release" "karpenter_crd" {
+  # chart info
+  repository = "oci://public.ecr.aws/karpenter"
+  chart      = "karpenter-crd"
+  version    = "1.3.2"
   # deployment info
-  name             = "metrics-server"
+  name             = "karpenter-crd"
   create_namespace = false
-  namespace        = ""
+  namespace        = "kube-system"
   max_history      = 2
   # install / update / rollback behavior
   atomic                = false
+  cleanup_on_fail       = false
   dependency_update     = true
   force_update          = false
   recreate_pods         = false
+  replace               = false
   render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
   skip_crds             = false
   timeout               = 300
-  # upgrade_install       = false
-  wait          = true
-  wait_for_jobs = true
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
+  # chart custom values
+  values = []
+}
+
+resource "helm_release" "karpenter" {
+  # chart info
+  repository = "oci://public.ecr.aws/karpenter"
+  chart      = "karpenter"
+  version    = "1.3.2"
+  # deployment info
+  name             = "karpenter"
+  create_namespace = false
+  namespace        = "kube-system"
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  cleanup_on_fail       = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  replace               = false
+  render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
+  skip_crds             = true
+  timeout               = 300
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
   # chart custom values
   values = [
     templatefile(
-      "${path.module}/helm/metrics-server.yaml",
+      "${path.module}/helm/karpenter-1.3.2.yaml",
       {
-
+        irsa_arn        = module.karpenter.iam_role_arn
+        cluster         = module.eks.cluster_name
       }
     )
   ]

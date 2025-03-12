@@ -1,5 +1,3 @@
-data "aws_region" "current" {}
-
 locals {
   # provider
   region  = "ap-northeast-2"
