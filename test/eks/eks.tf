@@ -54,6 +54,22 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
+      configuration_values = jsonencode({
+        tolerations = [
+          {
+            key      = "node.kurlypay.io/managed-by"
+            operator = "Equal"
+            value    = "mng"
+            effect   = "NoExecute"
+          },
+          {
+            key      = "node.kurlypay.io/capacity-type"
+            operator = "Equal"
+            value    = "on-demand"
+            effect   = "NoExecute"
+          }
+        ]
+      })
     }
     kube-proxy = {
       before_compute              = true
@@ -78,7 +94,7 @@ module "eks" {
     any = { type = "egress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"], description = "to any" }
   }
   eks_managed_node_groups = {
-    common-node-group = {
+    common_node_group = {
       # managed node group
       use_name_prefix                = true
       name                           = format("%s-%s-%s-eks-ng", local.corp, local.environment, local.product)
@@ -92,7 +108,18 @@ module "eks" {
       force_update_version           = false
       instance_types                 = ["t3.xlarge"]
       labels                         = {}
-      taints                         = {}
+      taints = {
+        managed_by = {
+          key    = "node.kurlypay.io/managed-by"
+          value  = "mng"
+          effect = "NO_EXECUTE"
+        }
+        capacity_type = {
+          key    = "node.kurlypay.io/capacity-type"
+          value  = "on-demand"
+          effect = "NO_EXECUTE"
+        }
+      }
       # launch template
       create_launch_template                 = true
       use_custom_launch_template             = true
@@ -163,7 +190,7 @@ module "karpenter" {
   # karpenter node iam role
   create_instance_profile = false
   create_node_iam_role    = false
-  node_iam_role_arn       = module.eks.eks_managed_node_groups["common-node-group"].iam_role_arn
+  node_iam_role_arn       = module.eks.eks_managed_node_groups["common_node_group"].iam_role_arn
   # karpenter pod iam role
   create_iam_role                 = true
   enable_irsa                     = true
@@ -237,11 +264,15 @@ resource "helm_release" "karpenter" {
   # chart custom values
   values = [
     templatefile(
-      "${path.module}/helm/karpenter-1.3.2.yaml",
+      "${path.module}/helm/karpenter-1.3.2.tftpl",
       {
-        irsa_arn        = module.karpenter.iam_role_arn
-        cluster         = module.eks.cluster_name
+        iam_irsa_arn     = module.karpenter.iam_role_arn
+        cluster          = module.eks.cluster_name
+        cluster_endpoint = module.eks.cluster_endpoint
+        sqs              = module.karpenter.queue_name
       }
     )
   ]
+
+  depends_on = [module.eks.eks_managed_node_groups]
 }

@@ -1,6 +1,3 @@
-service:
-  # -- Additional annotations for the Service.
-  annotations: {}
 serviceAccount:
   # -- Specifies if a ServiceAccount should be created.
   create: true
@@ -9,7 +6,7 @@ serviceAccount:
   name: karpenter-sa
   # -- Additional annotations for the ServiceAccount.
   annotations:
-    eks.amazonaws.com/role-arn: ${irsa_arn}
+    eks.amazonaws.com/role-arn: ${iam_irsa_arn}
 serviceMonitor:
   # -- Specifies whether a ServiceMonitor should be created.
   enabled: false
@@ -34,12 +31,7 @@ nodeSelector:
   kubernetes.io/os: linux
 # -- Affinity rules for scheduling the pod. If an explicit label selector is not provided for pod affinity or pod anti-affinity one will be created from the pod selector labels.
 affinity:
-  nodeAffinity:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: karpenter.sh/nodepool
-              operator: DoesNotExist
+  nodeAffinity: {}
   podAntiAffinity: {}
 # -- Topology spread constraints to increase the controller resilience by distributing pods across the cluster zones. If an explicit label selector is not provided one will be created from the pod selector labels.
 topologySpreadConstraints:
@@ -51,25 +43,19 @@ topologySpreadConstraints:
     whenUnsatisfiable: DoNotSchedule
 # -- Tolerations to allow the pod to be scheduled to nodes with taints.
 tolerations:
-  - key: CriticalAddonsOnly
-    operator: Exists
+  - key: node.kurlypay.io/managed-by
+    operator: Equal
+    value: mng
+    effect: NoExecute
+  - key: node.kurlypay.io/capacity-type
+    operator: Equal
+    value: on-demand
+    effect: NoExecute
 controller:
   # -- Distinguishing container name (containerName: karpenter-controller).
   containerName: controller
-  image:
-    # -- Repository path to the controller image.
-    repository: public.ecr.aws/karpenter/controller
-    # -- Tag of the controller image.
-    tag: 1.3.2
-    # -- SHA256 digest of the controller image.
-    digest: sha256:3fffcbbb6d0b1a2183a07bbe52c902d344fa41f8a8485de43760432ef7e2fd17
-  # -- Additional environment variables for the controller pod.
-  env: []
-  # - name: AWS_REGION
-  #   value: eu-west-1
-  envFrom: []
   # -- Resources for the controller pod.
-  resources: {}
+  resources:
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
@@ -81,15 +67,6 @@ controller:
   #    cpu: 1
   #    memory: 1Gi
 
-  # -- Additional volumeMounts for the controller pod.
-  extraVolumeMounts: []
-  # - name: aws-iam-token
-  #   mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
-  #   readOnly: true
-  # -- Additional sidecarContainer config
-  sidecarContainer: []
-  # -- Additional volumeMounts for the sidecar - this will be added to the volume mounts on top of extraVolumeMounts
-  sidecarVolumeMounts: []
   metrics:
     # -- The container port to use for metrics.
     port: 8080
@@ -116,9 +93,9 @@ settings:
   # -- Cluster CA bundle for TLS configuration of provisioned nodes. If not set, this is taken from the controller's TLS configuration for the API server.
   clusterCABundle: ""
   # -- Cluster name.
-  clusterName: ""
+  clusterName: ${cluster}
   # -- Cluster endpoint. If not set, will be discovered during startup (EKS only)
-  clusterEndpoint: ""
+  clusterEndpoint: ${cluster_endpoint}
   # -- If true then assume we can't reach AWS services which don't have a VPC endpoint
   # This also has the effect of disabling look-ups to the AWS pricing endpoint
   isolatedVPC: false
@@ -129,7 +106,7 @@ settings:
   # -- Interruption queue is the name of the SQS queue used for processing interruption events from EC2
   # Interruption handling is disabled if not specified. Enabling interruption handling may
   # require additional permissions on the controller service account. Additional permissions are outlined in the docs.
-  interruptionQueue: ""
+  interruptionQueue: ${sqs}
   # -- Reserved ENIs are not included in the calculations for max-pods or kube-reserved
   # This is most often used in the VPC CNI custom networking setup https://docs.aws.amazon.com/eks/latest/userguide/cni-custom-network.html
   reservedENIs: "0"
@@ -144,4 +121,4 @@ settings:
     reservedCapacity: false
     # -- spotToSpotConsolidation is ALPHA and is disabled by default.
     # Setting this to true will enable spot replacement consolidation for both single and multi-node consolidation.
-    spotToSpotConsolidation: false
+    spotToSpotConsolidation: true
