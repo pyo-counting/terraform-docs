@@ -55,6 +55,7 @@ module "eks" {
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
       configuration_values = jsonencode({
+        replicaCount = 2
         tolerations = [
           {
             key      = "node.kurlypay.io/managed-by"
@@ -67,6 +68,32 @@ module "eks" {
             operator = "Equal"
             value    = "on-demand"
             effect   = "NoExecute"
+          }
+        ]
+        podDisruptionBudget = {
+          enabled        = true
+          maxUnavailable = 1
+        }
+        topologySpreadConstraints = [
+          {
+            maxSkew           = 1
+            topologyKey       = "topology.kubernetes.io/zone"
+            whenUnsatisfiable = "DoNotSchedule"
+            labelSelector = {
+              matchLabels = {
+                k8s-app = "kube-dns"
+              }
+            }
+          },
+          {
+            maxSkew           = 1
+            topologyKey       = "kubernetes.io/hostname"
+            whenUnsatisfiable = "DoNotSchedule"
+            labelSelector = {
+              matchLabels = {
+                k8s-app = "kube-dns"
+              }
+            }
           }
         ]
       })
@@ -264,7 +291,7 @@ resource "helm_release" "karpenter" {
   # chart custom values
   values = [
     templatefile(
-      "${path.module}/helm/karpenter-1.3.2.tftpl",
+      "${path.module}/helm/karpenter-1.3.2.yaml",
       {
         iam_irsa_arn     = module.karpenter.iam_role_arn
         cluster          = module.eks.cluster_name
@@ -275,4 +302,23 @@ resource "helm_release" "karpenter" {
   ]
 
   depends_on = [module.eks.eks_managed_node_groups]
+}
+
+resource "kubernetes_manifest" "ec2nc" {
+  manifest = yamldecode(templatefile(
+    "${path.module}/k8s/ec2nc-1.3.2.yaml",
+    {
+      subnet_ids          = [aws_subnet.main["pri-1"].id, aws_subnet.main["pri-2"].id]
+      security_group_id    = module.eks.node_security_group_id
+      iam_instance_profile = module.eks.eks_managed_node_groups["common_node_group"].iam_role_name
+      ami_alias            = "al2@v20250203"
+      metadata_options = {
+        http_endpoint               = "enabled"
+        http_put_response_hop_limit = 2
+        http_tokens                 = "required"
+      }
+    }
+  ))
+
+  depends_on = [helm_release.karpenter_crd]
 }
