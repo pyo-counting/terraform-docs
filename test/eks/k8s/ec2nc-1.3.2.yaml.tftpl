@@ -1,0 +1,29 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default-ec2nc
+spec:
+  subnetSelectorTerms:
+    %{~ for subnet_id in subnet_ids ~}
+    - id: ${subnet_id}
+    %{~ endfor ~}
+  securityGroupSelectorTerms:
+    - id: ${security_group_id}
+  instanceProfile: ${iam_instance_profile}
+  amiSelectorTerms:
+    - alias: ${ami_alias}
+  metadataOptions:
+    httpEndpoint: ${http_endpoint}
+    httpProtocolIPv6: disabled
+    httpPutResponseHopLimit: ${http_put_response_hop_limit}
+    httpTokens: ${http_tokens}
+  blockDeviceMappings:
+    - deviceName: ${device_name}
+      ebs:
+        volumeSize: ${volume_size}
+        volumeType: ${volume_type}
+        encrypted: ${encrypted}
+        deleteOnTermination: ${delete_on_termination}
+  userData: |
+    ${user_data}
+  detailedMonitoring: ${detailed_monitoring}

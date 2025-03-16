@@ -3,7 +3,7 @@ serviceAccount:
   create: true
   # -- The name of the ServiceAccount to use.
   # If not set and create is true, a name is generated using the fullname template.
-  name: karpenter-sa
+  name: ${service_account}
   # -- Additional annotations for the ServiceAccount.
   annotations:
     eks.amazonaws.com/role-arn: ${iam_irsa_arn}
