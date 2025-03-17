@@ -16,6 +16,7 @@ spec:
         - key: node.kurlypay.io/capacity-type
           value: on-demand
           effect: NoExecute
+      expireAfter: Never
       terminationGracePeriod: 48h # 2d
       requirements:
           # topology constraints
