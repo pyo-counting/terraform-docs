@@ -1,9 +1,9 @@
 locals {
   # provider
   region  = "ap-northeast-2"
-  profile = "devops"
+  profile = "playground"
 
   corp        = "psy"
-  environment = "devops"
+  environment = "playground"
   product     = "test"
 }

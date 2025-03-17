@@ -219,8 +219,8 @@ module "karpenter" {
   queue_name                = format("%s-%s-%s-sqs-karpenter", local.corp, local.environment, local.product)
   queue_managed_sse_enabled = true
   # karpenter node iam role
-  create_instance_profile = false
   create_node_iam_role    = false
+  create_instance_profile = true
   node_iam_role_arn       = module.eks.eks_managed_node_groups["common_node_group"].iam_role_arn
   # karpenter pod iam role
   create_iam_role                 = true
@@ -309,7 +309,7 @@ resource "helm_release" "karpenter" {
   depends_on = [module.eks.eks_managed_node_groups]
 }
 
-resource "kubectl_manifest" "ec2nc" {
+resource "kubectl_manifest" "default_ec2nc" {
   server_side_apply = true
   wait              = true
 
@@ -318,14 +318,14 @@ resource "kubectl_manifest" "ec2nc" {
     {
       subnet_ids           = [aws_subnet.main["pri-1"].id, aws_subnet.main["pri-2"].id]
       security_group_id    = module.eks.node_security_group_id
-      iam_instance_profile = module.eks.eks_managed_node_groups["common_node_group"].iam_role_name
+      iam_instance_profile = module.karpenter.instance_profile_name
       ami_alias            = "al2@v20250203"
       # metadata_options
       http_endpoint               = "enabled"
       http_put_response_hop_limit = 2
       http_tokens                 = "required"
       # block_device_mappings
-      device_name           = "/dev/vbda"
+      device_name           = "/dev/xvda"
       delete_on_termination = true
       encrypted             = true
       volume_size           = "20Gi"
@@ -334,8 +334,22 @@ resource "kubectl_manifest" "ec2nc" {
       detailed_monitoring   = true
     }
   )
+
   depends_on = [
     helm_release.karpenter_crd,
     helm_release.karpenter
+  ]
+}
+
+resource "kubectl_manifest" "default_nop_ondemand" {
+  server_side_apply = true
+  wait              = true
+
+  yaml_body = file("${path.module}/k8s/nop-ondemand-1.3.2.yaml.tftpl")
+
+  depends_on = [
+    helm_release.karpenter_crd,
+    helm_release.karpenter,
+    kubectl_manifest.default_ec2nc
   ]
 }
