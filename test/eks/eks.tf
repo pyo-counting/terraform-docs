@@ -28,10 +28,8 @@ module "eks" {
   cloudwatch_log_group_retention_in_days     = 1
   cluster_enabled_log_types                  = ["audit", "api", "authenticator", "controllerManager", "scheduler"]
   # eks cluster iam role
-  create_iam_role          = true
-  iam_role_use_name_prefix = false
-  iam_role_name            = format("%s-%s-%s-role-eks-cluster", local.corp, local.environment, local.product)
-  iam_role_description     = "eks cluster iam role"
+  create_iam_role          = false
+  iam_role_arn = module.iam_assumable_role_eks.wrapper["eks_cluster"].iam_role_arn
   # additional cluster security group
   create_cluster_security_group          = true
   cluster_security_group_use_name_prefix = true
@@ -49,8 +47,8 @@ module "eks" {
   }
   access_entries = {
     node = {
-      principal_arn = module.iam_assumable_role.wrapper["eks_node"].iam_role_arn
-      type = "EC2_LINUX"
+      principal_arn = module.iam_assumable_role_eks.wrapper["eks_ec2_node"].iam_role_arn
+      type          = "EC2_LINUX"
     }
   }
   cluster_addons = {
@@ -110,10 +108,10 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
-      service_account_role_arn    = module.controller_iam_role_with_eks_oidc.wrapper["aws_efs_csi"].iam_role_arn
+      service_account_role_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_efs_csi"].iam_role_arn
       configuration_values = jsonencode({
         controller = {
-          replicaCount = 2
+          replicaCount             = 2
           deleteAccessPointRootDir = true
           tolerations = [
             {
@@ -136,7 +134,7 @@ module "eks" {
               whenUnsatisfiable = "DoNotSchedule"
               labelSelector = {
                 matchLabels = {
-                  app= "efs-csi-controller"
+                  app = "efs-csi-controller"
                 }
               }
             },
@@ -146,7 +144,7 @@ module "eks" {
               whenUnsatisfiable = "DoNotSchedule"
               labelSelector = {
                 matchLabels = {
-                  app= "efs-csi-controller"
+                  app = "efs-csi-controller"
                 }
               }
             }
@@ -167,7 +165,7 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
-      service_account_role_arn    = module.controller_iam_role_with_eks_oidc.wrapper["vpc_cni"].iam_role_arn
+      service_account_role_arn    = module.iam_role_with_eks_oidc_system.wrapper["vpc_cni"].iam_role_arn
     }
   }
   cluster_security_group_additional_rules = {}
@@ -178,10 +176,10 @@ module "eks" {
     any = { type = "egress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"], description = "to any" }
   }
   eks_managed_node_groups = {
-    common_node_group = {
+    system_node_group = {
       # managed node group
       use_name_prefix                = true
-      name                           = format("%s-%s-%s-eks-ng", local.corp, local.environment, local.product)
+      name                           = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system")
       min_size                       = 2
       desired_size                   = 2
       max_size                       = 2
@@ -215,8 +213,9 @@ module "eks" {
       update_launch_template_default_version = true
       enable_monitoring                      = true
       # eks node iam role
-      create_iam_role            = false
-      iam_role_arn = module.iam_assumable_role.wrapper["eks_node"].iam_role_arn
+      create_iam_role = false
+      iam_role_arn    = module.iam_assumable_role_eks.wrapper["eks_ec2_node"].iam_role_arn
+
       node_repair_config = {
         enabled = false
       }
@@ -239,14 +238,13 @@ module "eks" {
           }
         }
       }
-      tags                 = { Name = format("%s-%s-%s-eks-ng", local.corp, local.environment, local.product) }
+      tags                 = { Name = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system") }
       launch_template_tags = { Name = format("%s-%s-%s-lt", local.corp, local.environment, local.product) }
     }
   }
 
   cloudwatch_log_group_tags   = { Name = format("/aws/eks/%s-%s-%s-eks/cluster", local.corp, local.environment, local.product) }
   cluster_tags                = { Name = format("%s-%s-%s-eks", local.corp, local.environment, local.product) }
-  iam_role_tags               = { Name = format("%s-%s-%s-role-eks-cluster", local.corp, local.environment, local.product) }
   cluster_security_group_tags = { Name = format("%s-%s-%s-sg-eks-cluster", local.corp, local.environment, local.product) }
   node_security_group_tags    = { Name = format("%s-%s-%s-sg-eks-node", local.corp, local.environment, local.product) }
 
@@ -268,10 +266,10 @@ module "karpenter" {
   enable_spot_termination   = true
   queue_name                = format("%s-%s-%s-sqs-karpenter", local.corp, local.environment, local.product)
   queue_managed_sse_enabled = true
-  # karpenter node iam role
+  # node iam role
   create_node_iam_role    = false
   create_instance_profile = false
-  node_iam_role_arn       = module.iam_assumable_role.wrapper["eks_node"].iam_role_arn
+  node_iam_role_arn       = module.iam_assumable_role_eks.wrapper["eks_ec2_node"].iam_role_arn
   # karpenter pod iam role
   create_iam_role                 = true
   enable_irsa                     = true
@@ -368,7 +366,7 @@ resource "kubectl_manifest" "default_ec2nc" {
     {
       subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
       security_group_id    = module.eks.node_security_group_id
-      iam_instance_profile = module.iam_assumable_role.wrapper["eks_node"].iam_instance_profile_name
+      iam_instance_profile = module.iam_assumable_role_eks.wrapper["eks_ec2_node"].iam_instance_profile_name
       ami_alias            = "al2@v20250203"
       # metadata_options
       http_endpoint               = "enabled"

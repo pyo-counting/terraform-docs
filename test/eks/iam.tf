@@ -1,4 +1,4 @@
-module "iam_assumable_role" {
+module "iam_assumable_role_eks" {
   source  = "terraform-aws-modules/iam/aws//wrappers/iam-assumable-role"
   version = "5.52.2"
 
@@ -6,12 +6,33 @@ module "iam_assumable_role" {
     create_role = true
   }
   items = {
-    eks_node = {
-      role_name               = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-node")
-      role_description        = "iam role for eks node"
-      role_requires_mfa       = false
+    eks_cluster = {
+      role_name         = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-cluster")
+      role_description  = "iam role for eks cluster"
+      role_requires_mfa = false
+      tags              = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-cluster") }
+      # ec2 instance profile
+      create_instance_profile = false
+      # permission policy
+      inline_policy_statements = []
+      custom_role_policy_arns = [
+        "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+      ]
+      # trust policy
+      create_custom_role_trust_policy = false
+      custom_role_trust_policy        = ""
+      trusted_role_services           = ["eks.amazonaws.com"]
+      trust_policy_conditions         = []
+      trusted_role_actions            = []
+      trusted_role_arns               = []
+    }
+    eks_ec2_node = {
+      role_name         = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-ec2-node")
+      role_description  = "iam role for eks ec2 node"
+      role_requires_mfa = false
+      tags              = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-ec2-node") }
+      # ec2 instance profile
       create_instance_profile = true
-      tags                    = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-node") }
       # permission policy
       inline_policy_statements = []
       custom_role_policy_arns = [
@@ -31,7 +52,7 @@ module "iam_assumable_role" {
   }
 }
 
-module "controller_iam_role_with_eks_oidc" {
+module "iam_role_with_eks_oidc_system" {
   source  = "terraform-aws-modules/iam/aws//wrappers/iam-role-for-service-accounts-eks"
   version = "5.52.2"
 
