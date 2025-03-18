@@ -1,3 +1,36 @@
+module "iam_assumable_role" {
+  source  = "terraform-aws-modules/iam/aws//wrappers/iam-assumable-role"
+  version = "5.52.2"
+
+  defaults = {
+    create_role = true
+  }
+  items = {
+    eks_node = {
+      role_name               = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-node")
+      role_description        = "iam role for eks node"
+      role_requires_mfa       = false
+      create_instance_profile = true
+      tags                    = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-node") }
+      # permission policy
+      inline_policy_statements = []
+      custom_role_policy_arns = [
+        "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+        "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+        "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+        "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      ]
+      # trust policy
+      create_custom_role_trust_policy = false
+      custom_role_trust_policy        = ""
+      trusted_role_services           = ["ec2.amazonaws.com"]
+      trust_policy_conditions         = []
+      trusted_role_actions            = []
+      trusted_role_arns               = []
+    }
+  }
+}
+
 module "controller_iam_role_with_eks_oidc" {
   source  = "terraform-aws-modules/iam/aws//wrappers/iam-role-for-service-accounts-eks"
   version = "5.52.2"
@@ -6,7 +39,7 @@ module "controller_iam_role_with_eks_oidc" {
     create_role = true
   }
   items = {
-    vpc-cni = {
+    vpc_cni = {
       role_name                      = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "vpc-cni")
       role_description               = "iam role for vpc-cni irsa"
       tags                           = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "vpc-cni") }
@@ -18,6 +51,18 @@ module "controller_iam_role_with_eks_oidc" {
         eks_20250220 = {
           provider_arn               = module.eks.oidc_provider_arn
           namespace_service_accounts = ["kube-system:aws-node"]
+        }
+      }
+    }
+    aws_efs_csi = {
+      role_name             = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "aws-efs-csi")
+      role_description      = "iam role for aws-efs-csi irsa"
+      tags                  = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "aws-efs-csi") }
+      attach_efs_csi_policy = true
+      oidc_providers = {
+        eks_20250220 = {
+          provider_arn               = module.eks.oidc_provider_arn
+          namespace_service_accounts = ["kube-system:efs-csi-controller-sa", "kube-system:efs-csi-node-sa"]
         }
       }
     }

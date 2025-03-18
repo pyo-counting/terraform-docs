@@ -10,11 +10,11 @@ resource "aws_internet_gateway" "main" {
 
 resource "aws_subnet" "main" {
   for_each = {
-    pri-1 = {
+    pri_1 = {
       az         = "ap-northeast-2a"
       cidr_block = "172.27.0.0/21"
     }
-    pri-2 = {
+    pri_2 = {
       az         = "ap-northeast-2b"
       cidr_block = "172.27.8.0/21"
     }
@@ -62,13 +62,13 @@ resource "aws_route_table" "private" {
   }
 }
 
-resource "aws_route_table_association" "pri-1" {
-  subnet_id      = aws_subnet.main["pri-1"].id
+resource "aws_route_table_association" "pri_1" {
+  subnet_id      = aws_subnet.main["pri_1"].id
   route_table_id = aws_route_table.private.id
 }
 
-resource "aws_route_table_association" "pri-2" {
-  subnet_id      = aws_subnet.main["pri-2"].id
+resource "aws_route_table_association" "pri_2" {
+  subnet_id      = aws_subnet.main["pri_2"].id
   route_table_id = aws_route_table.private.id
 }
 

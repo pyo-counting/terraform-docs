@@ -22,7 +22,7 @@ module "eks" {
   cluster_ip_family                          = "ipv4"
   cluster_service_ipv4_cidr                  = "10.100.0.0/16"
   vpc_id                                     = aws_vpc.main.id
-  subnet_ids                                 = [aws_subnet.main["pri-1"].id, aws_subnet.main["pri-2"].id]
+  subnet_ids                                 = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
   create_cloudwatch_log_group                = true
   cloudwatch_log_group_class                 = "STANDARD"
   cloudwatch_log_group_retention_in_days     = 1
@@ -46,6 +46,12 @@ module "eks" {
 
   cluster_upgrade_policy = {
     support_type = "EXTENDED"
+  }
+  access_entries = {
+    node = {
+      principal_arn = module.iam_assumable_role.wrapper["eks_node"].iam_role_arn
+      type = "EC2_LINUX"
+    }
   }
   cluster_addons = {
     coredns = {
@@ -98,6 +104,56 @@ module "eks" {
         ]
       })
     }
+    aws-efs-csi-driver = {
+      before_compute              = false
+      addon_version               = "v2.1.6-eksbuild.1"
+      resolve_conflicts_on_create = "NONE"
+      resolve_conflicts_on_update = "NONE"
+      preserve                    = false
+      service_account_role_arn    = module.controller_iam_role_with_eks_oidc.wrapper["aws_efs_csi"].iam_role_arn
+      configuration_values = jsonencode({
+        controller = {
+          replicaCount = 2
+          deleteAccessPointRootDir = true
+          tolerations = [
+            {
+              key      = "node.kurlypay.io/managed-by"
+              operator = "Equal"
+              value    = "mng"
+              effect   = "NoExecute"
+            },
+            {
+              key      = "node.kurlypay.io/capacity-type"
+              operator = "Equal"
+              value    = "on-demand"
+              effect   = "NoExecute"
+            }
+          ]
+          topologySpreadConstraints = [
+            {
+              maxSkew           = 1
+              topologyKey       = "topology.kubernetes.io/zone"
+              whenUnsatisfiable = "DoNotSchedule"
+              labelSelector = {
+                matchLabels = {
+                  app= "efs-csi-controller"
+                }
+              }
+            },
+            {
+              maxSkew           = 1
+              topologyKey       = "kubernetes.io/hostname"
+              whenUnsatisfiable = "DoNotSchedule"
+              labelSelector = {
+                matchLabels = {
+                  app= "efs-csi-controller"
+                }
+              }
+            }
+          ]
+        }
+      })
+    }
     kube-proxy = {
       before_compute              = true
       addon_version               = "v1.32.0-eksbuild.2"
@@ -111,9 +167,10 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
-      service_account_role_arn    = module.controller_iam_role_with_eks_oidc.wrapper["vpc-cni"].iam_role_arn
+      service_account_role_arn    = module.controller_iam_role_with_eks_oidc.wrapper["vpc_cni"].iam_role_arn
     }
   }
+  cluster_security_group_additional_rules = {}
   node_security_group_additional_rules = {
     # ingress
     local_vpc = { type = "ingress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["172.27.0.0/19"], description = "from local vpc" }
@@ -147,6 +204,8 @@ module "eks" {
           effect = "NO_EXECUTE"
         }
       }
+      # user data
+      pre_bootstrap_user_data = ""
       # launch template
       create_launch_template                 = true
       use_custom_launch_template             = true
@@ -156,12 +215,8 @@ module "eks" {
       update_launch_template_default_version = true
       enable_monitoring                      = true
       # eks node iam role
-      create_iam_role            = true
-      iam_role_use_name_prefix   = false
-      iam_role_attach_cni_policy = false
-      iam_role_name              = format("%s-%s-%s-role-eks-node", local.corp, local.environment, local.product)
-      iam_role_description       = "eks cluster node iam role"
-
+      create_iam_role            = false
+      iam_role_arn = module.iam_assumable_role.wrapper["eks_node"].iam_role_arn
       node_repair_config = {
         enabled = false
       }
@@ -184,13 +239,8 @@ module "eks" {
           }
         }
       }
-      iam_role_additional_policies = {
-        ssm = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-      }
-
       tags                 = { Name = format("%s-%s-%s-eks-ng", local.corp, local.environment, local.product) }
       launch_template_tags = { Name = format("%s-%s-%s-lt", local.corp, local.environment, local.product) }
-      iam_role_tags        = { Name = format("%s-%s-%s-role-eks-node", local.corp, local.environment, local.product) }
     }
   }
 
@@ -201,8 +251,8 @@ module "eks" {
   node_security_group_tags    = { Name = format("%s-%s-%s-sg-eks-node", local.corp, local.environment, local.product) }
 
   depends_on = [
-    aws_route_table_association.pri-1,
-    aws_route_table_association.pri-2,
+    aws_route_table_association.pri_1,
+    aws_route_table_association.pri_2,
     aws_route_table_association.pub
   ]
 }
@@ -220,8 +270,8 @@ module "karpenter" {
   queue_managed_sse_enabled = true
   # karpenter node iam role
   create_node_iam_role    = false
-  create_instance_profile = true
-  node_iam_role_arn       = module.eks.eks_managed_node_groups["common_node_group"].iam_role_arn
+  create_instance_profile = false
+  node_iam_role_arn       = module.iam_assumable_role.wrapper["eks_node"].iam_role_arn
   # karpenter pod iam role
   create_iam_role                 = true
   enable_irsa                     = true
@@ -316,9 +366,9 @@ resource "kubectl_manifest" "default_ec2nc" {
   yaml_body = templatefile(
     "${path.module}/k8s/ec2nc-1.3.2.yaml.tftpl",
     {
-      subnet_ids           = [aws_subnet.main["pri-1"].id, aws_subnet.main["pri-2"].id]
+      subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
       security_group_id    = module.eks.node_security_group_id
-      iam_instance_profile = module.karpenter.instance_profile_name
+      iam_instance_profile = module.iam_assumable_role.wrapper["eks_node"].iam_instance_profile_name
       ami_alias            = "al2@v20250203"
       # metadata_options
       http_endpoint               = "enabled"
