@@ -1,14 +1,14 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: default-nop-ondemand
+  name: nop-ondemand
 spec:
   template:
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: default-ec2nc
+        name: ec2nc
       taints:
         - key: node.kurlypay.io/managed-by
           value: karpenter

@@ -1,7 +1,7 @@
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
-  name: default-ec2nc
+  name: ec2nc
 spec:
   subnetSelectorTerms:
     %{~ for subnet_id in subnet_ids ~}

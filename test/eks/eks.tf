@@ -28,8 +28,10 @@ module "eks" {
   cloudwatch_log_group_retention_in_days     = 1
   cluster_enabled_log_types                  = ["audit", "api", "authenticator", "controllerManager", "scheduler"]
   # eks cluster iam role
-  create_iam_role          = false
-  iam_role_arn = module.iam_assumable_role_eks.wrapper["eks_cluster"].iam_role_arn
+  create_iam_role          = true
+  iam_role_use_name_prefix = false
+  iam_role_name            = format("%s-%s-%s-role-eks-cluster", local.corp, local.environment, local.product)
+  iam_role_description     = "eks cluster iam role"
   # additional cluster security group
   create_cluster_security_group          = true
   cluster_security_group_use_name_prefix = true
@@ -46,8 +48,9 @@ module "eks" {
     support_type = "EXTENDED"
   }
   access_entries = {
-    node = {
-      principal_arn = module.iam_assumable_role_eks.wrapper["eks_ec2_node"].iam_role_arn
+    # data plane
+    node_ec2 = {
+      principal_arn = module.iam_assumable_role_eks.wrapper["eks_node_ec2"].iam_role_arn
       type          = "EC2_LINUX"
     }
   }
@@ -203,18 +206,18 @@ module "eks" {
         }
       }
       # user data
-      pre_bootstrap_user_data = ""
+      pre_bootstrap_user_data = file("${path.module}/ec2/al2-userdata.sh")
       # launch template
       create_launch_template                 = true
       use_custom_launch_template             = true
       launch_template_use_name_prefix        = true
-      launch_template_name                   = format("%s-%s-%s-lt", local.corp, local.environment, local.product)
+      launch_template_name                   = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system")
       launch_template_description            = "eks managed node group launch template"
       update_launch_template_default_version = true
       enable_monitoring                      = true
       # eks node iam role
       create_iam_role = false
-      iam_role_arn    = module.iam_assumable_role_eks.wrapper["eks_ec2_node"].iam_role_arn
+      iam_role_arn    = module.iam_assumable_role_eks.wrapper["eks_node_ec2"].iam_role_arn
 
       node_repair_config = {
         enabled = false
@@ -239,7 +242,7 @@ module "eks" {
         }
       }
       tags                 = { Name = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system") }
-      launch_template_tags = { Name = format("%s-%s-%s-lt", local.corp, local.environment, local.product) }
+      launch_template_tags = { Name = format("%s-%s-%s-lt", local.corp, local.environment, local.product, "system") }
     }
   }
 
@@ -269,7 +272,7 @@ module "karpenter" {
   # node iam role
   create_node_iam_role    = false
   create_instance_profile = false
-  node_iam_role_arn       = module.iam_assumable_role_eks.wrapper["eks_ec2_node"].iam_role_arn
+  node_iam_role_arn       = module.iam_assumable_role_eks.wrapper["eks_node_ec2"].iam_role_arn
   # karpenter pod iam role
   create_iam_role                 = true
   enable_irsa                     = true
@@ -345,6 +348,7 @@ resource "helm_release" "karpenter" {
     templatefile(
       "${path.module}/helm/karpenter-1.3.2.yaml.tftpl",
       {
+        environment      = local.environment
         iam_irsa_arn     = module.karpenter.iam_role_arn
         cluster          = module.eks.cluster_name
         cluster_endpoint = module.eks.cluster_endpoint
@@ -357,16 +361,15 @@ resource "helm_release" "karpenter" {
   depends_on = [module.eks.eks_managed_node_groups]
 }
 
-resource "kubectl_manifest" "default_ec2nc" {
+resource "kubectl_manifest" "ec2nc" {
   server_side_apply = true
   wait              = true
-
   yaml_body = templatefile(
     "${path.module}/k8s/ec2nc-1.3.2.yaml.tftpl",
     {
       subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
       security_group_id    = module.eks.node_security_group_id
-      iam_instance_profile = module.iam_assumable_role_eks.wrapper["eks_ec2_node"].iam_instance_profile_name
+      iam_instance_profile = module.iam_assumable_role_eks.wrapper["eks_node_ec2"].iam_instance_profile_name
       ami_alias            = "al2@v20250203"
       # metadata_options
       http_endpoint               = "enabled"
@@ -378,7 +381,7 @@ resource "kubectl_manifest" "default_ec2nc" {
       encrypted             = true
       volume_size           = "20Gi"
       volume_type           = "gp3"
-      user_data             = indent(4, file("${path.module}/ec2/userdata.sh"))
+      user_data             = indent(4, file("${path.module}/ec2/al2-userdata.sh"))
       detailed_monitoring   = true
     }
   )
@@ -389,15 +392,14 @@ resource "kubectl_manifest" "default_ec2nc" {
   ]
 }
 
-resource "kubectl_manifest" "default_nop_ondemand" {
+resource "kubectl_manifest" "nop_ondemand" {
   server_side_apply = true
   wait              = true
-
   yaml_body = file("${path.module}/k8s/nop-ondemand-1.3.2.yaml.tftpl")
 
   depends_on = [
     helm_release.karpenter_crd,
     helm_release.karpenter,
-    kubectl_manifest.default_ec2nc
+    kubectl_manifest.ec2nc
   ]
 }

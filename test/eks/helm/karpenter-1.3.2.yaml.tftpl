@@ -20,7 +20,7 @@ strategy:
     maxUnavailable: 1
 # -- Additional labels for the pod.
 podLabels:
-  loki.kurlypay.io/job: "dev_karpenter"
+  loki.kurlypay.io/job: "${environment}_karpenter"
 podDisruptionBudget:
   name: karpenter
   maxUnavailable: 1

@@ -6,40 +6,19 @@ module "iam_assumable_role_eks" {
     create_role = true
   }
   items = {
-    eks_cluster = {
-      role_name         = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-cluster")
-      role_description  = "iam role for eks cluster"
-      role_requires_mfa = false
-      tags              = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-cluster") }
-      # ec2 instance profile
-      create_instance_profile = false
-      # permission policy
-      inline_policy_statements = []
-      custom_role_policy_arns = [
-        "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-      ]
-      # trust policy
-      create_custom_role_trust_policy = false
-      custom_role_trust_policy        = ""
-      trusted_role_services           = ["eks.amazonaws.com"]
-      trust_policy_conditions         = []
-      trusted_role_actions            = []
-      trusted_role_arns               = []
-    }
-    eks_ec2_node = {
-      role_name         = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-ec2-node")
+    eks_node_ec2 = {
+      role_name         = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-node-ec2")
       role_description  = "iam role for eks ec2 node"
       role_requires_mfa = false
-      tags              = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-ec2-node") }
+      tags              = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "eks-node-ec2") }
       # ec2 instance profile
       create_instance_profile = true
       # permission policy
       inline_policy_statements = []
       custom_role_policy_arns = [
-        "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+        "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPullOnly",
         "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
         "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
-        "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
       ]
       # trust policy
       create_custom_role_trust_policy = false

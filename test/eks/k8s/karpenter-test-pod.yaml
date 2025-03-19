@@ -4,6 +4,8 @@ metadata:
   name: test-pod
   namespace: default
 spec:
+  nodeSelector:
+    karpenter.sh/capacity-type: on-demand
   tolerations:
     - key: node.kurlypay.io/managed-by
       operator: Equal
