@@ -242,7 +242,7 @@ module "eks" {
         }
       }
       tags                 = { Name = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system") }
-      launch_template_tags = { Name = format("%s-%s-%s-lt", local.corp, local.environment, local.product, "system") }
+      launch_template_tags = { Name = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system") }
     }
   }
 
