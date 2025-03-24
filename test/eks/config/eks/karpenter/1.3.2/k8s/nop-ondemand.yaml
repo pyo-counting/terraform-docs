@@ -60,4 +60,4 @@ spec:
           - Underutilized
           - Drifted
   limits:
-    cpu: 500
+    cpu: 100
