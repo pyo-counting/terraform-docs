@@ -206,7 +206,7 @@ module "eks" {
         }
       }
       # user data
-      pre_bootstrap_user_data = file("${path.module}/ec2/al2-userdata.sh")
+      pre_bootstrap_user_data = file("${path.module}/config/ec2/al2-1.32.0-20250203-userdata.sh")
       # launch template
       create_launch_template                 = true
       use_custom_launch_template             = true
@@ -344,19 +344,16 @@ resource "helm_release" "karpenter" {
   wait                  = true
   wait_for_jobs         = true
   # chart custom values
-  values = [
-    templatefile(
-      "${path.module}/helm/karpenter-1.3.2.yaml.tftpl",
-      {
-        environment      = local.environment
-        iam_irsa_arn     = module.karpenter.iam_role_arn
-        cluster          = module.eks.cluster_name
-        cluster_endpoint = module.eks.cluster_endpoint
-        sqs              = module.karpenter.queue_name
-        service_account  = "karpenter-sa"
-      }
-    )
-  ]
+  values = [templatefile("${path.module}/config/eks/karpenter-1.3.2/helm/values.yaml.tftpl",
+    {
+      environment      = local.environment
+      iam_irsa_arn     = module.karpenter.iam_role_arn
+      cluster          = module.eks.cluster_name
+      cluster_endpoint = module.eks.cluster_endpoint
+      sqs              = module.karpenter.queue_name
+      service_account  = "karpenter-sa"
+    }
+  )]
 
   depends_on = [module.eks.eks_managed_node_groups]
 }
@@ -364,8 +361,7 @@ resource "helm_release" "karpenter" {
 resource "kubectl_manifest" "ec2nc" {
   server_side_apply = true
   wait              = true
-  yaml_body = templatefile(
-    "${path.module}/k8s/ec2nc-1.3.2.yaml.tftpl",
+  yaml_body = templatefile("${path.module}/config/eks/karpenter-1.3.2/k8s/ec2nc.yaml.tftpl",
     {
       subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
       security_group_id    = module.eks.node_security_group_id
@@ -381,7 +377,7 @@ resource "kubectl_manifest" "ec2nc" {
       encrypted             = true
       volume_size           = "20Gi"
       volume_type           = "gp3"
-      user_data             = indent(4, file("${path.module}/ec2/al2-userdata.sh"))
+      user_data             = indent(4, file("${path.module}/config/ec2/al2-1.32.0-20250203-userdata.sh"))
       detailed_monitoring   = true
     }
   )
@@ -395,7 +391,7 @@ resource "kubectl_manifest" "ec2nc" {
 resource "kubectl_manifest" "nop_ondemand" {
   server_side_apply = true
   wait              = true
-  yaml_body = file("${path.module}/k8s/nop-ondemand-1.3.2.yaml.tftpl")
+  yaml_body         = file("${path.module}/config/eks/karpenter-1.3.2/k8s/nop-ondemand.yaml")
 
   depends_on = [
     helm_release.karpenter_crd,
