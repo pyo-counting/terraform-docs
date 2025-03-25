@@ -50,7 +50,7 @@ module "eks" {
   access_entries = {
     # data plane
     node_ec2 = {
-      principal_arn = module.iam_assumable_role_eks.wrapper["eks_node_ec2"].iam_role_arn
+      principal_arn = module.iam_role.wrapper["eks_node_ec2"].iam_role_arn
       type          = "EC2_LINUX"
     }
   }
@@ -111,7 +111,7 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
-      service_account_role_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_efs_csi"].iam_role_arn
+      service_account_role_arn    = module.iam_role_with_oidc.wrapper["aws_efs_csi"].iam_role_arn
       configuration_values = jsonencode({
         controller = {
           replicaCount             = 2
@@ -168,7 +168,7 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
-      service_account_role_arn    = module.iam_role_with_eks_oidc_system.wrapper["vpc_cni"].iam_role_arn
+      service_account_role_arn    = module.iam_role_with_oidc.wrapper["vpc_cni"].iam_role_arn
     }
   }
   cluster_security_group_additional_rules = {}
@@ -217,7 +217,7 @@ module "eks" {
       enable_monitoring                      = true
       # eks node iam role
       create_iam_role = false
-      iam_role_arn    = module.iam_assumable_role_eks.wrapper["eks_node_ec2"].iam_role_arn
+      iam_role_arn    = module.iam_role.wrapper["eks_node_ec2"].iam_role_arn
 
       node_repair_config = {
         enabled = false
@@ -272,7 +272,7 @@ module "karpenter" {
   # node iam role
   create_node_iam_role    = false
   create_instance_profile = false
-  node_iam_role_arn       = module.iam_assumable_role_eks.wrapper["eks_node_ec2"].iam_role_arn
+  node_iam_role_arn       = module.iam_role.wrapper["eks_node_ec2"].iam_role_arn
   # karpenter pod iam role
   create_iam_role                 = true
   enable_irsa                     = true
@@ -310,7 +310,7 @@ resource "helm_release" "karpenter_crd" {
   reset_values          = false
   reuse_values          = false
   skip_crds             = false
-  timeout               = 300
+  timeout               = 300 # 5m
   upgrade_install       = false
   wait                  = true
   wait_for_jobs         = true
@@ -339,7 +339,7 @@ resource "helm_release" "karpenter" {
   reset_values          = false
   reuse_values          = false
   skip_crds             = true
-  timeout               = 300
+  timeout               = 300 # 5m
   upgrade_install       = false
   wait                  = true
   wait_for_jobs         = true
@@ -365,7 +365,7 @@ resource "kubectl_manifest" "ec2nc" {
     {
       subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
       security_group_id    = module.eks.node_security_group_id
-      iam_instance_profile = module.iam_assumable_role_eks.wrapper["eks_node_ec2"].iam_instance_profile_name
+      iam_instance_profile = module.iam_role.wrapper["eks_node_ec2"].iam_instance_profile_name
       ami_alias            = "al2@v20250203"
       # metadata_options
       http_endpoint               = "enabled"
@@ -393,9 +393,5 @@ resource "kubectl_manifest" "nop_ondemand" {
   wait              = true
   yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/k8s/nop-ondemand.yaml")
 
-  depends_on = [
-    helm_release.karpenter_crd,
-    helm_release.karpenter,
-    kubectl_manifest.ec2nc
-  ]
+  depends_on = [kubectl_manifest.ec2nc]
 }

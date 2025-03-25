@@ -1,4 +1,4 @@
-module "iam_assumable_role_eks" {
+module "iam_role" {
   source  = "terraform-aws-modules/iam/aws//wrappers/iam-assumable-role"
   version = "5.52.2"
 
@@ -31,7 +31,7 @@ module "iam_assumable_role_eks" {
   }
 }
 
-module "iam_role_with_eks_oidc_system" {
+module "iam_role_with_oidc" {
   source  = "terraform-aws-modules/iam/aws//wrappers/iam-role-for-service-accounts-eks"
   version = "5.52.2"
 
