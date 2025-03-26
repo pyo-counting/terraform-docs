@@ -179,19 +179,19 @@ module "eks" {
     any = { type = "egress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"], description = "to any" }
   }
   eks_managed_node_groups = {
-    system_node_group = {
+    system = {
       # managed node group
       use_name_prefix                = true
       name                           = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system")
       min_size                       = 2
       desired_size                   = 2
-      max_size                       = 2
+      max_size                       = 4
       ami_type                       = "AL2_x86_64"
       ami_release_version            = "1.32.0-20250203"
       use_latest_ami_release_version = false
       capacity_type                  = "ON_DEMAND"
       force_update_version           = false
-      instance_types                 = ["t3.xlarge"]
+      instance_types                 = ["t3.large"]
       labels                         = {}
       taints = {
         managed_by = {
@@ -212,7 +212,7 @@ module "eks" {
       use_custom_launch_template             = true
       launch_template_use_name_prefix        = true
       launch_template_name                   = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system")
-      launch_template_description            = "eks managed node group launch template"
+      launch_template_description            = "eks system managed node group launch template"
       update_launch_template_default_version = true
       enable_monitoring                      = true
       # eks node iam role
@@ -248,6 +248,7 @@ module "eks" {
 
   cloudwatch_log_group_tags   = { Name = format("/aws/eks/%s-%s-%s-eks/cluster", local.corp, local.environment, local.product) }
   cluster_tags                = { Name = format("%s-%s-%s-eks", local.corp, local.environment, local.product) }
+  iam_role_tags               = { Name = format("%s-%s-%s-role-eks-cluster", local.corp, local.environment, local.product) }
   cluster_security_group_tags = { Name = format("%s-%s-%s-sg-eks-cluster", local.corp, local.environment, local.product) }
   node_security_group_tags    = { Name = format("%s-%s-%s-sg-eks-node", local.corp, local.environment, local.product) }
 
@@ -347,10 +348,10 @@ resource "helm_release" "karpenter" {
   values = [templatefile("${path.module}/config/eks/karpenter/1.3.2/helm/values.yaml.tftpl",
     {
       environment      = local.environment
-      iam_irsa_arn     = module.karpenter.iam_role_arn
       cluster          = module.eks.cluster_name
       cluster_endpoint = module.eks.cluster_endpoint
       sqs              = module.karpenter.queue_name
+      iam_irsa_arn     = module.karpenter.iam_role_arn
       service_account  = "karpenter-sa"
     }
   )]
