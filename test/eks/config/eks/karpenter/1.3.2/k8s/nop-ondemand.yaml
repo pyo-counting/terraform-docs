@@ -10,10 +10,10 @@ spec:
         kind: EC2NodeClass
         name: ec2nc
       taints:
-        - key: node.kurlypay.io/managed-by
+        - key: node.pyo-counting.io/managed-by
           value: karpenter
           effect: NoExecute
-        - key: node.kurlypay.io/capacity-type
+        - key: node.pyo-counting.io/capacity-type
           value: on-demand
           effect: NoExecute
       expireAfter: Never

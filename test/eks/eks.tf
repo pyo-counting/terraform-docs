@@ -61,99 +61,7 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
-      configuration_values = jsonencode({
-        replicaCount = 2
-        tolerations = [
-          {
-            key      = "node.kurlypay.io/managed-by"
-            operator = "Equal"
-            value    = "mng"
-            effect   = "NoExecute"
-          },
-          {
-            key      = "node.kurlypay.io/capacity-type"
-            operator = "Equal"
-            value    = "on-demand"
-            effect   = "NoExecute"
-          }
-        ]
-        podDisruptionBudget = {
-          enabled        = true
-          maxUnavailable = 1
-        }
-        topologySpreadConstraints = [
-          {
-            maxSkew           = 1
-            topologyKey       = "topology.kubernetes.io/zone"
-            whenUnsatisfiable = "DoNotSchedule"
-            labelSelector = {
-              matchLabels = {
-                k8s-app = "kube-dns"
-              }
-            }
-          },
-          {
-            maxSkew           = 1
-            topologyKey       = "kubernetes.io/hostname"
-            whenUnsatisfiable = "DoNotSchedule"
-            labelSelector = {
-              matchLabels = {
-                k8s-app = "kube-dns"
-              }
-            }
-          }
-        ]
-      })
-    }
-    aws-efs-csi-driver = {
-      before_compute              = false
-      addon_version               = "v2.1.6-eksbuild.1"
-      resolve_conflicts_on_create = "NONE"
-      resolve_conflicts_on_update = "NONE"
-      preserve                    = false
-      service_account_role_arn    = module.iam_role_with_oidc.wrapper["aws_efs_csi"].iam_role_arn
-      configuration_values = jsonencode({
-        controller = {
-          replicaCount             = 2
-          deleteAccessPointRootDir = true
-          tolerations = [
-            {
-              key      = "node.kurlypay.io/managed-by"
-              operator = "Equal"
-              value    = "mng"
-              effect   = "NoExecute"
-            },
-            {
-              key      = "node.kurlypay.io/capacity-type"
-              operator = "Equal"
-              value    = "on-demand"
-              effect   = "NoExecute"
-            }
-          ]
-          topologySpreadConstraints = [
-            {
-              maxSkew           = 1
-              topologyKey       = "topology.kubernetes.io/zone"
-              whenUnsatisfiable = "DoNotSchedule"
-              labelSelector = {
-                matchLabels = {
-                  app = "efs-csi-controller"
-                }
-              }
-            },
-            {
-              maxSkew           = 1
-              topologyKey       = "kubernetes.io/hostname"
-              whenUnsatisfiable = "DoNotSchedule"
-              labelSelector = {
-                matchLabels = {
-                  app = "efs-csi-controller"
-                }
-              }
-            }
-          ]
-        }
-      })
+      configuration_values        = jsonencode(yamldecode(file("${path.module}/config/eks/coredns/v1.11.4-eksbuild.2/aws-addon/values.yaml")))
     }
     kube-proxy = {
       before_compute              = true
@@ -161,6 +69,7 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
+      # configuration_values        = jsonencode(yamldecode(file("${path.module}/config/eks/kube-proxy/v1.32.0-eksbuild.2/aws-addon/values.yaml")))
     }
     vpc-cni = {
       before_compute              = true
@@ -169,6 +78,7 @@ module "eks" {
       resolve_conflicts_on_update = "NONE"
       preserve                    = false
       service_account_role_arn    = module.iam_role_with_oidc.wrapper["vpc_cni"].iam_role_arn
+      # configuration_values        = jsonencode(yamldecode(file("${path.module}/config/eks/vpc-cni/v1.19.2-eksbuild.1/aws-addon/values.yaml")))
     }
   }
   cluster_security_group_additional_rules = {}
@@ -191,16 +101,16 @@ module "eks" {
       use_latest_ami_release_version = false
       capacity_type                  = "ON_DEMAND"
       force_update_version           = false
-      instance_types                 = ["t3.large"]
+      instance_types                 = ["t3a.large"]
       labels                         = {}
       taints = {
         managed_by = {
-          key    = "node.kurlypay.io/managed-by"
+          key    = "node.pyo-counting.io/managed-by"
           value  = "mng"
           effect = "NO_EXECUTE"
         }
         capacity_type = {
-          key    = "node.kurlypay.io/capacity-type"
+          key    = "node.pyo-counting.io/capacity-type"
           value  = "on-demand"
           effect = "NO_EXECUTE"
         }
@@ -317,6 +227,8 @@ resource "helm_release" "karpenter_crd" {
   wait_for_jobs         = true
   # chart custom values
   values = []
+
+  depends_on = [module.eks]
 }
 
 resource "helm_release" "karpenter" {
@@ -356,7 +268,7 @@ resource "helm_release" "karpenter" {
     }
   )]
 
-  depends_on = [module.eks.eks_managed_node_groups]
+  depends_on = [module.eks]
 }
 
 resource "kubectl_manifest" "ec2nc" {
@@ -395,4 +307,172 @@ resource "kubectl_manifest" "nop_ondemand" {
   yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/k8s/nop-ondemand.yaml")
 
   depends_on = [kubectl_manifest.ec2nc]
+}
+
+resource "helm_release" "aws_efs_csi_driver" {
+  # chart info
+  repository = "https://kubernetes-sigs.github.io/aws-efs-csi-driver/"
+  chart      = "aws-efs-csi-driver"
+  version    = "3.1.7"
+  # deployment info
+  name             = "aws-efs-csi-driver"
+  create_namespace = false
+  namespace        = "kube-system"
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  cleanup_on_fail       = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  replace               = false
+  render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
+  skip_crds             = true
+  timeout               = 300 # 5m
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
+  # chart custom values
+  values = [templatefile("${path.module}/config/eks/aws-efs-csi-driver/3.1.7/helm/values.yaml.tftpl",
+    {
+      #  controller pod
+      controller_iam_irsa_arn    = module.iam_role_with_oidc.wrapper["aws_efs_csi"].iam_role_arn
+      controller_service_account = "efs-csi-controller-sa"
+      # node pod
+      node_iam_irsa_arn    = module.iam_role_with_oidc.wrapper["aws_efs_csi"].iam_role_arn
+      node_service_account = "efs-csi-node-sa"
+    }
+  )]
+
+  depends_on = [module.eks]
+}
+
+resource "helm_release" "metrics_server" {
+  # chart info
+  repository = "https://kubernetes-sigs.github.io/metrics-server/"
+  chart      = "metrics-server"
+  version    = "3.12.2"
+  # deployment info
+  name             = "metrics-server"
+  create_namespace = false
+  namespace        = "kube-system"
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  cleanup_on_fail       = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  replace               = false
+  render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
+  skip_crds             = true
+  timeout               = 300 # 5m
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
+  # chart custom values
+  values = [file("${path.module}/config/eks/metrics-server/0.7.2/helm/values.yaml")]
+
+  depends_on = [module.eks]
+}
+
+resource "helm_release" "secrets_store_csi_driver" {
+  # chart info
+  repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
+  chart      = "secrets-store-csi-driver"
+  version    = "1.4.8"
+  # deployment info
+  name             = "secrets-store-csi-driver"
+  create_namespace = false
+  namespace        = "kube-system"
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  cleanup_on_fail       = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  replace               = false
+  render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
+  skip_crds             = false
+  timeout               = 300 # 5m
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
+  # chart custom values
+  values = [file("${path.module}/config/eks/secrets-store-csi-driver/1.4.8/helm/values.yaml")]
+
+  depends_on = [module.eks]
+}
+
+resource "helm_release" "secrets_store_csi_driver_provider_aws" {
+  # chart info
+  repository = "https://aws.github.io/secrets-store-csi-driver-provider-aws"
+  chart      = "secrets-store-csi-driver-provider-aws"
+  version    = "0.3.10"
+  # deployment info
+  name             = "secrets-store-csi-driver-provider-aws"
+  create_namespace = false
+  namespace        = "kube-system"
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  cleanup_on_fail       = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  replace               = false
+  render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
+  skip_crds             = false
+  timeout               = 300 # 5m
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
+  # chart custom values
+  values = [file("${path.module}/config/eks/secrets-store-csi-driver-provider-aws/0.3.10/helm/values.yaml")]
+
+  depends_on = [helm_release.secrets_store_csi_driver]
+}
+
+resource "helm_release" "aws_load_balancer_controller" {
+  # chart info
+  repository = "https://aws.github.io/eks-charts"
+  chart      = "aws-load-balancer-controller"
+  version    = "1.7.2"
+  # deployment info
+  name             = "aws-load-balancer-controller"
+  create_namespace = false
+  namespace        = "kube-system"
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  cleanup_on_fail       = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  replace               = false
+  render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
+  skip_crds             = false
+  timeout               = 300 # 5m
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
+  # chart custom values
+  values = [templatefile("${path.module}/config/eks/aws-load-balancer-controller/1.7.2/helm/values.yaml.tftpl", {
+    cluster         = module.eks.cluster_name
+    service_account = "aws-load-balancer-controller-sa"
+    iam_irsa_arn    = module.iam_role_with_oidc.wrapper["aws_load_balancer"].iam_role_arn
+  })]
+
+  depends_on = [module.eks]
 }

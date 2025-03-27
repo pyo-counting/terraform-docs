@@ -20,7 +20,7 @@ strategy:
     maxUnavailable: 1
 # -- Additional labels for the pod.
 podLabels:
-  loki.kurlypay.io/job: "${environment}_karpenter"
+  loki.pyo-counting.io.io/job: "${environment}_karpenter"
 podDisruptionBudget:
   name: karpenter
   maxUnavailable: 1
@@ -38,16 +38,22 @@ topologySpreadConstraints:
   - maxSkew: 1
     topologyKey: topology.kubernetes.io/zone
     whenUnsatisfiable: DoNotSchedule
+    nodeTaintsPolicy: Honor
+    matchLabelKeys:
+      - pod-template-hash
   - maxSkew: 1
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: DoNotSchedule
+    nodeTaintsPolicy: Honor
+    matchLabelKeys:
+      - pod-template-hash
 # -- Tolerations to allow the pod to be scheduled to nodes with taints.
 tolerations:
-  - key: node.kurlypay.io/managed-by
+  - key: node.pyo-counting.io/managed-by
     operator: Equal
     value: mng
     effect: NoExecute
-  - key: node.kurlypay.io/capacity-type
+  - key: node.pyo-counting.io/capacity-type
     operator: Equal
     value: on-demand
     effect: NoExecute

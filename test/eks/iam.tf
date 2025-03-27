@@ -54,6 +54,18 @@ module "iam_role_with_oidc" {
         }
       }
     }
+    aws_load_balancer = {
+      role_name                              = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "aws-load-balancer")
+      role_description                       = "iam role for vpc-cni irsa"
+      tags                                   = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "aws-load-balancer") }
+      attach_load_balancer_controller_policy = true
+      oidc_providers = {
+        eks_20250220 = {
+          provider_arn               = module.eks.oidc_provider_arn
+          namespace_service_accounts = ["kube-system:aws-load-balancer-controller-sa"]
+        }
+      }
+    }
     aws_efs_csi = {
       role_name             = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "aws-efs-csi")
       role_description      = "iam role for aws-efs-csi irsa"
