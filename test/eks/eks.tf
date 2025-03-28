@@ -59,7 +59,7 @@ module "eks" {
       before_compute              = false
       addon_version               = "v1.11.4-eksbuild.2"
       resolve_conflicts_on_create = "NONE"
-      resolve_conflicts_on_update = "NONE"
+      resolve_conflicts_on_update = "PRESERVE"
       preserve                    = false
       configuration_values        = jsonencode(yamldecode(file("${path.module}/config/eks/coredns/v1.11.4-eksbuild.2/aws-addon/values.yaml")))
     }
@@ -67,7 +67,7 @@ module "eks" {
       before_compute              = true
       addon_version               = "v1.32.0-eksbuild.2"
       resolve_conflicts_on_create = "NONE"
-      resolve_conflicts_on_update = "NONE"
+      resolve_conflicts_on_update = "PRESERVE"
       preserve                    = false
       # configuration_values        = jsonencode(yamldecode(file("${path.module}/config/eks/kube-proxy/v1.32.0-eksbuild.2/aws-addon/values.yaml")))
     }
@@ -75,7 +75,7 @@ module "eks" {
       before_compute              = true
       addon_version               = "v1.19.2-eksbuild.1"
       resolve_conflicts_on_create = "NONE"
-      resolve_conflicts_on_update = "NONE"
+      resolve_conflicts_on_update = "PRESERVE"
       preserve                    = false
       service_account_role_arn    = module.iam_role_with_oidc.wrapper["vpc_cni"].iam_role_arn
       # configuration_values        = jsonencode(yamldecode(file("${path.module}/config/eks/vpc-cni/v1.19.2-eksbuild.1/aws-addon/values.yaml")))

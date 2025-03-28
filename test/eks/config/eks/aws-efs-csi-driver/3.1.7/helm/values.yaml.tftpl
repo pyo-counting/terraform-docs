@@ -140,6 +140,7 @@ controller:
   #    whenUnsatisfiable: ScheduleAnyway
   topologySpreadConstraints:
     - maxSkew: 1
+      minDomains: 2
       topologyKey: topology.kubernetes.io/zone
       whenUnsatisfiable: DoNotSchedule
       nodeTaintsPolicy: Honor
@@ -149,6 +150,7 @@ controller:
       matchLabelKeys:
         - pod-template-hash
     - maxSkew: 1
+      minDomains: 2
       topologyKey: kubernetes.io/hostname
       whenUnsatisfiable: DoNotSchedule
       nodeTaintsPolicy: Honor

@@ -86,6 +86,7 @@ configureDefaultAffinity: true
 # more details here: https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
 topologySpreadConstraints:
   - maxSkew: 1
+    minDomains: 2
     topologyKey: topology.kubernetes.io/zone
     whenUnsatisfiable: DoNotSchedule
     nodeTaintsPolicy: Honor
@@ -95,6 +96,7 @@ topologySpreadConstraints:
     matchLabelKeys:
       - pod-template-hash
   - maxSkew: 1
+    minDomains: 2
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: DoNotSchedule
     nodeTaintsPolicy: Honor

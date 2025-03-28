@@ -36,12 +36,14 @@ affinity:
 # -- Topology spread constraints to increase the controller resilience by distributing pods across the cluster zones. If an explicit label selector is not provided one will be created from the pod selector labels.
 topologySpreadConstraints:
   - maxSkew: 1
+    minDomains: 2
     topologyKey: topology.kubernetes.io/zone
     whenUnsatisfiable: DoNotSchedule
     nodeTaintsPolicy: Honor
     matchLabelKeys:
       - pod-template-hash
   - maxSkew: 1
+    minDomains: 2
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: DoNotSchedule
     nodeTaintsPolicy: Honor
