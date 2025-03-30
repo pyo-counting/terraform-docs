@@ -274,7 +274,7 @@ resource "helm_release" "karpenter" {
 resource "kubectl_manifest" "ec2nc" {
   server_side_apply = true
   wait              = true
-  yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/k8s/ec2nc.yaml.tftpl",
+  yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/manifest/ec2nc.yaml.tftpl",
     {
       subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
       security_group_id    = module.eks.node_security_group_id
@@ -304,7 +304,7 @@ resource "kubectl_manifest" "ec2nc" {
 resource "kubectl_manifest" "nop_ondemand" {
   server_side_apply = true
   wait              = true
-  yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/k8s/nop-ondemand.yaml")
+  yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/manifest/nop-ondemand.yaml")
 
   depends_on = [kubectl_manifest.ec2nc]
 }

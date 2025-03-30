@@ -15,7 +15,7 @@ resource "aws_subnet" "main" {
       cidr_block = "172.27.0.0/21"
     }
     pri_2 = {
-      az         = "ap-northeast-2b"
+      az         = "ap-northeast-2c"
       cidr_block = "172.27.8.0/21"
     }
     pub = {
