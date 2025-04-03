@@ -268,7 +268,7 @@ resource "helm_release" "karpenter" {
     }
   )]
 
-  depends_on = [module.eks]
+  depends_on = [module.karpenter]
 }
 
 resource "kubectl_manifest" "ec2nc" {
