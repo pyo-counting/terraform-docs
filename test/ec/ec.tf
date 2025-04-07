@@ -15,7 +15,7 @@ module "ec" {
   cluster_mode_enabled                      = true
   num_node_groups                           = 1 # valid when cluster mode enabled
   replicas_per_node_group                   = 0 # valid when cluster mode enabled(min 2, when automatic_failover_enabled or multi_az_enabled is true)
-  # num_cache_clusters          = 2     # valid when cluster mode disabled
+  # num_cache_clusters                        = 2     # valid when cluster mode disabled
   automatic_failover_enabled = false # muste be true when cluster mode enabled or multi az enabled
   multi_az_enabled           = false
   # preferred_cache_cluster_azs = ["${local.region}a", "${local.region}c"] # valid when cluster mode disabled
