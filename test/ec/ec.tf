@@ -11,18 +11,18 @@ module "ec" {
   engine                                    = "valkey"
   engine_version                            = "7.2"
   node_type                                 = "cache.t4g.small"
-  cluster_mode                              = "disabled"
-  cluster_mode_enabled                      = false
-  # num_node_groups                           = 1 # valid when cluster mode enabled
-  # replicas_per_node_group                   = 2 # valid when cluster mode enabled(min 2)
-  num_cache_clusters          = 2     # valid when cluster mode disabled
-  automatic_failover_enabled  = false # muste be true when cluster mode enabled or multi az enabled
-  multi_az_enabled            = false
-  preferred_cache_cluster_azs = ["${local.region}a", "${local.region}c"] # valid when cluster mode disabled
-  data_tiering_enabled        = false
-  user_group_ids              = []
-  description                 = "ec valkey replication group"
-  tags                        = {}
+  cluster_mode                              = "enabled"
+  cluster_mode_enabled                      = true
+  num_node_groups                           = 1 # valid when cluster mode enabled
+  replicas_per_node_group                   = 0 # valid when cluster mode enabled(min 2, when automatic_failover_enabled or multi_az_enabled is true)
+  # num_cache_clusters          = 2     # valid when cluster mode disabled
+  automatic_failover_enabled = false # muste be true when cluster mode enabled or multi az enabled
+  multi_az_enabled           = false
+  # preferred_cache_cluster_azs = ["${local.region}a", "${local.region}c"] # valid when cluster mode disabled
+  data_tiering_enabled = false
+  user_group_ids       = []
+  description          = "ec valkey replication group"
+  tags                 = { Name = format("%s-%s-%s-ec-valkey", local.corp, local.environment, local.product) }
   log_delivery_configuration = {
     defaults = {
       create_cloudwatch_log_group = true
@@ -36,9 +36,12 @@ module "ec" {
   security_group_use_name_prefix = true
   vpc_id                         = aws_vpc.main.id
   security_group_name            = format("%s-%s-%s-sg-ec-valkey", local.corp, local.environment, local.product)
-  security_group_rules           = []
-  security_group_description     = "ec valkey replication group secrurity group"
-  security_group_tags            = {}
+  security_group_rules = {
+    # ingress
+    local_vpc = { type = "ingress", from_port = 6379, to_port = 6379, ip_protocol = "tcp", cidr_ipv4 = "172.28.0.0/19", description = "from local vpc" }
+  }
+  security_group_description = "ec valkey replication group secrurity group"
+  security_group_tags        = { Name = format("%s-%s-%s-sg-ec-valkey", local.corp, local.environment, local.product) }
   # network config
   create_subnet_group      = true
   subnet_ids               = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
@@ -48,18 +51,21 @@ module "ec" {
   port                     = "6379"
   subnet_group_description = "ec valkey replicateion group subnet group"
   # parameter group
-  create_parameter_group      = true
-  parameter_group_family      = "valkey7"
-  parameter_group_name        = format("%s-%s-%s-paramg-ec-valkey7", local.corp, local.environment, local.product)
-  parameters                  = []
-  parameter_group_description = "ec valkey replicateion group subnet group(valkey7)"
+  create_parameter_group = true
+  parameter_group_family = "valkey7"
+  parameter_group_name   = format("%s-%s-%s-pargp-ec-valkey7", local.corp, local.environment, local.product)
+  parameters = [
+    { name = "cluster-enabled", value = "yes" }
+  ]
+  parameter_group_description = "ec valkey replicateion group parameter group(valkey7)"
   # encryption config
   at_rest_encryption_enabled = true
   kms_key_arn                = ""
   transit_encryption_enabled = false
   # snapshot config
-  snapshot_retention_limit = 1
-  snapshot_window = "17:00-18:00"
+  snapshot_retention_limit  = 1
+  snapshot_window           = "17:00-18:00"
+  final_snapshot_identifier = ""
   # update policy
   apply_immediately          = true
   auto_minor_version_upgrade = false
