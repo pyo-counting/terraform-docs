@@ -8,7 +8,7 @@ spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: ec2nc
+        name: ec2nc-default
       taints:
         - key: node.pyo-counting.io/managed-by
           value: karpenter
