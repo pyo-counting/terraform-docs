@@ -101,7 +101,7 @@ module "eks" {
       use_latest_ami_release_version = false
       capacity_type                  = "ON_DEMAND"
       force_update_version           = false
-      instance_types                 = ["t3a.large"]
+      instance_types                 = ["t3.large"]
       labels                         = {}
       taints = {
         managed_by = {
@@ -274,10 +274,10 @@ resource "helm_release" "karpenter" {
   ]
 }
 
-resource "kubectl_manifest" "ec2nc" {
+resource "kubectl_manifest" "karpenter_ec2nc_default" {
   server_side_apply = true
   wait              = true
-  yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/manifest/ec2nc.yaml.tftpl",
+  yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/manifest/ec2nc-default.yaml.tftpl",
     {
       subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
       security_group_id    = module.eks.node_security_group_id
@@ -304,12 +304,14 @@ resource "kubectl_manifest" "ec2nc" {
   ]
 }
 
-resource "kubectl_manifest" "nop_ondemand" {
+resource "kubectl_manifest" "karpenter_nop" {
+  for_each = fileset("${path.module}/config/eks/karpenter/1.3.2/manifest", "nop-*.yaml")
+
   server_side_apply = true
   wait              = true
-  yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/manifest/nop-ondemand.yaml")
+  yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/manifest/${each.key}")
 
-  depends_on = [kubectl_manifest.ec2nc]
+  depends_on = [kubectl_manifest.karpenter_ec2nc_default]
 }
 
 resource "helm_release" "aws_efs_csi_driver" {
