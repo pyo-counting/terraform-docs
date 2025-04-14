@@ -473,11 +473,13 @@ resource "helm_release" "aws_load_balancer_controller" {
   wait                  = true
   wait_for_jobs         = true
   # chart custom values
-  values = [templatefile("${path.module}/config/eks/aws-load-balancer-controller/1.7.2/helm/values.yaml.tftpl", {
-    cluster         = module.eks.cluster_name
-    service_account = "aws-load-balancer-controller-sa"
-    iam_irsa_arn    = module.iam_role_with_oidc.wrapper["aws_load_balancer"].iam_role_arn
-  })]
+  values = [templatefile("${path.module}/config/eks/aws-load-balancer-controller/1.7.2/helm/values.yaml.tftpl",
+    {
+      cluster         = module.eks.cluster_name
+      service_account = "aws-load-balancer-controller-sa"
+      iam_irsa_arn    = module.iam_role_with_oidc.wrapper["aws_load_balancer"].iam_role_arn
+    }
+  )]
 
   depends_on = [module.eks]
 }
