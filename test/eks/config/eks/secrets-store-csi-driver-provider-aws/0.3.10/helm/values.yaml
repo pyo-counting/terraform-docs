@@ -21,7 +21,7 @@ resources:
     cpu: 50m
     memory: 100Mi
 
-priorityClassName: ""
+priorityClassName: system-node-critical
 nodeSelector: {}
 
 tolerations:
