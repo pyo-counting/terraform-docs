@@ -77,7 +77,7 @@ module "eks" {
       resolve_conflicts_on_create = "NONE"
       resolve_conflicts_on_update = "PRESERVE"
       preserve                    = false
-      service_account_role_arn    = module.iam_role_with_oidc.wrapper["vpc_cni"].iam_role_arn
+      service_account_role_arn    = module.iam_role_with_eks_oidc_system.wrapper["vpc_cni"].iam_role_arn
       # configuration_values        = jsonencode(yamldecode(file("${path.module}/config/eks/vpc-cni/v1.19.2-eksbuild.1/aws-addon/values.yaml")))
     }
   }
@@ -343,10 +343,10 @@ resource "helm_release" "aws_efs_csi_driver" {
   values = [templatefile("${path.module}/config/eks/aws-efs-csi-driver/3.1.7/helm/values.yaml.tftpl",
     {
       #  controller pod
-      controller_iam_irsa_arn    = module.iam_role_with_oidc.wrapper["aws_efs_csi"].iam_role_arn
+      controller_iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_efs_csi"].iam_role_arn
       controller_service_account = "efs-csi-controller-sa"
       # node pod
-      node_iam_irsa_arn    = module.iam_role_with_oidc.wrapper["aws_efs_csi"].iam_role_arn
+      node_iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_efs_csi"].iam_role_arn
       node_service_account = "efs-csi-node-sa"
     }
   )]
@@ -477,9 +477,40 @@ resource "helm_release" "aws_load_balancer_controller" {
     {
       cluster         = module.eks.cluster_name
       service_account = "aws-load-balancer-controller-sa"
-      iam_irsa_arn    = module.iam_role_with_oidc.wrapper["aws_load_balancer"].iam_role_arn
+      iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_load_balancer"].iam_role_arn
     }
   )]
+
+  depends_on = [module.eks]
+}
+
+resource "helm_release" "k8sgpt" {
+  # chart info
+  repository = "https://charts.k8sgpt.ai"
+  chart      = "k8sgpt-operator"
+  version    = "0.2.13"
+  # deployment info
+  name             = "k8sgpt"
+  create_namespace = true
+  namespace        = "k8sgpt-ns"
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  cleanup_on_fail       = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  replace               = false
+  render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
+  skip_crds             = false
+  timeout               = 300 # 5m
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
+  # chart custom values
+  values = [file("${path.module}/config/eks/k8sgpt/0.2.13/helm/values.yaml")]
 
   depends_on = [module.eks]
 }

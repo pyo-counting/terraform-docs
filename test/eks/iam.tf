@@ -31,7 +31,7 @@ module "iam_role" {
   }
 }
 
-module "iam_role_with_oidc" {
+module "iam_role_with_eks_oidc_system" {
   source  = "terraform-aws-modules/iam/aws//wrappers/iam-role-for-service-accounts-eks"
   version = "5.52.2"
 
@@ -48,7 +48,7 @@ module "iam_role_with_oidc" {
       vpc_cni_enable_ipv4            = true
       vpc_cni_enable_ipv6            = false
       oidc_providers = {
-        eks_20250220 = {
+        eks = {
           provider_arn               = module.eks.oidc_provider_arn
           namespace_service_accounts = ["kube-system:aws-node"]
         }
@@ -60,7 +60,7 @@ module "iam_role_with_oidc" {
       tags                                   = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "aws-load-balancer") }
       attach_load_balancer_controller_policy = true
       oidc_providers = {
-        eks_20250220 = {
+        eks = {
           provider_arn               = module.eks.oidc_provider_arn
           namespace_service_accounts = ["kube-system:aws-load-balancer-controller-sa"]
         }
@@ -72,11 +72,52 @@ module "iam_role_with_oidc" {
       tags                  = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "aws-efs-csi") }
       attach_efs_csi_policy = true
       oidc_providers = {
-        eks_20250220 = {
+        eks = {
           provider_arn               = module.eks.oidc_provider_arn
           namespace_service_accounts = ["kube-system:efs-csi-controller-sa", "kube-system:efs-csi-node-sa"]
         }
       }
+    }
+  }
+}
+
+module "iam_role_with_eks_oidc" {
+  source  = "terraform-aws-modules/iam/aws//wrappers/iam-assumable-role-with-oidc"
+  version = "5.52.2"
+
+  defaults = {
+    create_role  = true
+    provider_url = module.eks.oidc_provider
+  }
+  items = {
+    k8sgpt = {
+      role_name        = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "k8sgpt")
+      role_description = "iam role for k8sgpt"
+      tags             = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "k8sgpt") }
+      provider_trust_policy_conditions = [
+        {
+          test     = "StringEquals"
+          variable = "${module.eks.oidc_provider}:aud"
+          values   = ["sts.amazonaws.com"]
+        },
+        {
+          test     = "StringEquals"
+          variable = "${module.eks.oidc_provider}:sub"
+          values   = ["system:serviceaccount:k8sgpt-ns:k8sgpt-controller-manager"]
+        }
+      ]
+      inline_policy_statements = [
+        {
+          effect = "Allow"
+          actions = [
+            "bedrock:InvokeModel",
+            "bedrock:InvokeModelWithResponseStream"
+          ]
+          resources = [
+            "arn:aws:bedrock:*::foundation-model/*"
+          ]
+        }
+      ]
     }
   }
 }
