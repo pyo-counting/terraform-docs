@@ -15,7 +15,7 @@ module "ec" {
   cluster_mode_enabled                      = true
   num_node_groups                           = 1 # valid when cluster mode enabled
   replicas_per_node_group                   = 0 # valid when cluster mode enabled(min 2, when automatic_failover_enabled or multi_az_enabled is true)
-  # num_cache_clusters                        = 2     # valid when cluster mode disabled
+  # num_cache_clusters                        = 2 # valid when cluster mode disabled
   automatic_failover_enabled = false # muste be true when cluster mode enabled or multi az enabled
   multi_az_enabled           = false
   # preferred_cache_cluster_azs = ["${local.region}a", "${local.region}c"] # valid when cluster mode disabled
@@ -51,12 +51,10 @@ module "ec" {
   port                     = "6379"
   subnet_group_description = "ec valkey replicateion group subnet group"
   # parameter group
-  create_parameter_group = true
-  parameter_group_family = "valkey7"
-  parameter_group_name   = format("%s-%s-%s-pargp-ec-valkey7", local.corp, local.environment, local.product)
-  parameters = [
-    { name = "cluster-enabled", value = "yes" }
-  ]
+  create_parameter_group      = true
+  parameter_group_family      = "valkey7"
+  parameter_group_name        = format("%s-%s-%s-pargp-ec-valkey7", local.corp, local.environment, local.product)
+  parameters                  = [{ name = "cluster-enabled", value = "yes" }]
   parameter_group_description = "ec valkey replicateion group parameter group(valkey7)"
   # encryption config
   at_rest_encryption_enabled = true
@@ -64,7 +62,7 @@ module "ec" {
   transit_encryption_enabled = false
   # snapshot config
   snapshot_retention_limit  = 1
-  snapshot_window           = "17:00-18:00"
+  snapshot_window           = "17:00-18:00" # (KST) 06:00 - 07:00
   final_snapshot_identifier = ""
   # update policy
   apply_immediately          = true
