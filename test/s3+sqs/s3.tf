@@ -144,7 +144,7 @@ module "s3_bucket_destination" {
       }
     }
   }
-  tags                      = { name = format("%s-%s-%s-s3-%s", local.corp, local.environment, local.product, "destination") }
+  tags                      = { Name = format("%s-%s-%s-s3-%s", local.corp, local.environment, local.product, "destination") }
   versioning                = { enabled = true }
   replication_configuration = {}
 }

@@ -68,4 +68,4 @@ module "ec" {
   apply_immediately          = true
   auto_minor_version_upgrade = false
   maintenance_window         = "sat:19:00-sat:21:00" # (KST) sun:04:00 - sun:06:00
-}    
+}

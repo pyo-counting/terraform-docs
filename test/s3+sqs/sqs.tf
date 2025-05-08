@@ -23,7 +23,7 @@ module "sqs_test" {
   # max_message_size
   # kms_data_key_reuse_period_seconds
   # kms_master_key_id
-  tags = { name = format("%s-%s-%s-sqs", local.corp, local.environment, local.product) }
+  tags = { Name = format("%s-%s-%s-sqs", local.corp, local.environment, local.product) }
   # dlq
   create_dlq = true
   dlq_name   = format("%s-%s-%s-dlq", local.corp, local.environment, local.product)
@@ -41,5 +41,5 @@ module "sqs_test" {
   dlq_sqs_managed_sse_enabled = true
   # dlq_kms_data_key_reuse_period_seconds
   # dlq_kms_master_key_id
-  dlq_tags = { name = format("%s-%s-%s-dlq", local.corp, local.environment, local.product) }
+  dlq_tags = { Name = format("%s-%s-%s-dlq", local.corp, local.environment, local.product) }
 }
