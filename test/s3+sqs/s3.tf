@@ -54,7 +54,6 @@ module "s3_bucket_source" {
       }
     }
   }
-  tags       = { Name = format("%s-%s-%s-s3-%s", local.corp, local.environment, local.product, "source") }
   versioning = { enabled = true }
   replication_configuration = {
     role = module.iam_role_s3_replication.iam_role_arn
@@ -86,6 +85,7 @@ module "s3_bucket_source" {
       }
     ]
   }
+  tags = { Name = format("%s-%s-%s-s3-%s", local.corp, local.environment, local.product, "source") }
 }
 
 module "s3_bucket_destination" {
@@ -144,9 +144,9 @@ module "s3_bucket_destination" {
       }
     }
   }
-  tags                      = { Name = format("%s-%s-%s-s3-%s", local.corp, local.environment, local.product, "destination") }
   versioning                = { enabled = true }
   replication_configuration = {}
+  tags                      = { Name = format("%s-%s-%s-s3-%s", local.corp, local.environment, local.product, "destination") }
 }
 
 module "s3_bucket_notification_destination" {
