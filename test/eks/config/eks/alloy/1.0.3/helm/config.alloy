@@ -379,7 +379,7 @@ loki.source.file "pod_log" {
 }
 
 loki.process "pod_log" {
-	forward_to = [loki.echo.test.receiver]
+	forward_to = [loki.write.loki.receiver]
 
 	stage.limit {
 		rate          = 1000
@@ -441,5 +441,3 @@ loki.write "loki" {
 	}
 	// wal {}
 }
-
-loki.echo "test" {}
