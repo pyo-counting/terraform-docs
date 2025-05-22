@@ -1,0 +1,445 @@
+livedebugging {
+	enabled = true
+}
+
+logging {
+	level  = "info"
+	format = "logfmt"
+}
+
+// trace
+// otelcol.receiver.otlp "otlp_receiver" {
+// 	http {
+// 		endpoint = "0.0.0.0:4318"
+// 	}
+
+// 	debug_metrics { }
+
+// 	output {
+// 		traces = [otelcol.processor.tail_sampling.otlp_tail_sampler.input]
+// 	}
+// }
+
+// otelcol.processor.tail_sampling "otlp_tail_sampler" {
+// 	decision_wait = "20s"
+// 	num_traces    = 500
+
+// 	policy {
+// 		name = "healthcheck-filter"
+// 		type = "string_attribute"
+
+// 		string_attribute {
+// 			key                    = "url.path"
+// 			values                 = [".*health.*"]
+// 			enabled_regex_matching = true
+// 			invert_match           = true
+// 		}
+// 	}
+
+// 	debug_metrics { }
+
+// 	output {
+// 		traces = [otelcol.exporter.otlphttp.tempo.input]
+// 	}
+// }
+
+// otelcol.exporter.otlphttp "tempo" {
+// 	client {
+// 		endpoint = "https://tempo.pyo-counting.services"
+// 		headers  = {
+// 			"X-Scope-OrgID" = "pyo-counting",
+// 		}
+// 	}
+
+// 	sending_queue {
+// 		enabled = true
+// 	}
+
+// 	debug_metrics { }
+// }
+
+// metric
+// prometheus.operator.servicemonitors "service_monitor" {
+// 	forward_to = [prometheus.relabel.psy.receiver]
+
+// 	clustering {
+// 		enabled = true
+// 	}
+
+// 	scrape {
+// 		default_scrape_interval = "10s"
+// 		default_scrape_timeout  = "10s"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_pod_node_name"]
+// 		target_label  = "aws_eks_node"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_pod_name"]
+// 		target_label  = "aws_eks_pod"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_pod_container_name"]
+// 		target_label  = "aws_eks_container"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_pod_container_id"]
+// 		target_label  = "aws_eks_container_id"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_namespace"]
+// 		target_label  = "aws_eks_namespace"
+// 	}
+// }
+
+// prometheus.relabel "psy" {
+// 	forward_to = [prometheus.remote_write.prometheus.receiver]
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["job"]
+// 		replacement   = "dev/$1"
+// 		target_label  = "job"
+// 	}
+
+// 	// drop default ServiceMonitor label
+// 	// ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/user-guides/running-exporters.md#default-labels
+// 	rule {
+// 		action = "labeldrop"
+// 		regex  = "node|namespace|service|pod|container|endpoint"
+// 	}
+// }
+
+// discovery.kubernetes "apiserver_service" {
+// 	role = "service"
+
+// 	namespaces {
+// 		names = ["default"]
+// 	}
+
+// 	selectors {
+// 		role  = "service"
+// 		label = "component=apiserver,provider=kubernetes"
+// 	}
+// }
+
+// discovery.relabel "apiserver_service" {
+// 	targets = discovery.kubernetes.apiserver_service.targets
+
+// 	rule {
+// 		action       = "replace"
+// 		replacement  = "kube-apiserver"
+// 		target_label = "aws_eks_component"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_pod_node_name"]
+// 		target_label  = "aws_eks_node"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_pod_name"]
+// 		target_label  = "aws_eks_pod"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_pod_container_name"]
+// 		target_label  = "aws_eks_container"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_pod_container_id"]
+// 		target_label  = "aws_eks_container_id"
+// 	}
+
+// 	rule {
+// 		action        = "replace"
+// 		source_labels = ["__meta_kubernetes_namespace"]
+// 		target_label  = "aws_eks_namespace"
+// 	}
+// }
+
+// prometheus.scrape "apiserver" {
+// 	targets           = discovery.relabel.apiserver_service.output
+// 	scheme            = "https"
+// 	job_name          = "kube-apiserver"
+// 	bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+// 	forward_to        = [prometheus.relabel.apiserver_service.receiver]
+// 	scrape_interval   = "10s"
+// 	scrape_timeout    = "10s"
+
+// 	clustering {
+// 		enabled = true
+// 	}
+
+// 	tls_config {
+// 		server_name          = "kubernetes"
+// 		ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+// 		insecure_skip_verify = false
+// 	}
+// }
+
+// prometheus.relabel "apiserver_service" {
+// 	forward_to = [prometheus.relabel.psy.receiver]
+
+// 	rule {
+// 		action        = "drop"
+// 		regex         = "apiserver_request_duration_seconds_bucket;(0.15|0.2|0.3|0.35|0.4|0.45|0.6|0.7|0.8|0.9|1.25|1.5|1.75|2|3|3.5|4|4.5|6|7|8|9|15|25|40|50)"
+// 		source_labels = ["__name__", "le"]
+// 	}
+// }
+
+// discovery.kubernetes "coredns_service" {
+// 	role = "service"
+
+// 	namespaces {
+// 		names = ["kube-system"]
+// 	}
+
+// 	selectors {
+// 		role  = "service"
+// 		label = "k8s-app=kube-dns"
+// 	}
+// }
+
+// prometheus.remote_write "prometheus" {
+// 	external_labels = {
+// 		aws_account    = "dev",
+// 		aws_account_id = "992503684012",
+// 		aws_eks        = "psy-dev-all-eks_v1_29",
+// 	}
+
+// 	endpoint {
+// 		url = "https://prometheus.pyo-counting.services/api/v1/write"
+// 	}
+// }
+
+// log
+discovery.kubernetes "pod_log" {
+	role = "pod"
+
+	selectors {
+		role  = "pod"
+		field = "spec.nodeName=" + coalesce(env("HOSTNAME"), constants.hostname)
+		label = "loki.pyo-counting.io/job"
+	}
+}
+
+discovery.relabel "pod_log" {
+	targets = discovery.kubernetes.pod_log.targets
+
+	rule {
+		action        = "keep"
+		regex         = "([a-z-]+)_([a-z-]+)([a-z-_]+)"
+		source_labels = ["__meta_kubernetes_pod_label_loki_pyo_counting_io_job"]
+	}
+
+	rule {
+		action        = "replace"
+		replacement   = "/var/log/pods/*$1/*.log"
+		separator     = "/"
+		source_labels = [
+			"__meta_kubernetes_pod_uid",
+			"__meta_kubernetes_pod_container_name",
+		]
+		target_label = "__path__"
+	}
+
+	rule {
+		action        = "replace"
+		regex         = "([a-z-]+)_([a-z-]+)"
+		replacement   = "$1/$2"
+		source_labels = ["__meta_kubernetes_pod_label_loki_pyo_counting_io_job"]
+		target_label  = "job"
+	}
+
+	rule {
+		action        = "replace"
+		regex         = "([a-z-]+)_([a-z-]+)_([a-z-]+)"
+		replacement   = "$1/$2/$3"
+		source_labels = ["__meta_kubernetes_pod_label_loki_pyo_counting_io_job"]
+		target_label  = "job"
+	}
+
+	rule {
+		action        = "replace"
+		regex         = "([a-z-]+)_([a-z-]+)_([a-z-]+)_([a-z-]+)"
+		replacement   = "$1/$2/$3/$4"
+		source_labels = ["__meta_kubernetes_pod_label_loki_pyo_counting_io_job"]
+		target_label  = "job"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_node_name"]
+		target_label  = "aws_eks_node"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_name"]
+		target_label  = "aws_eks_pod"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_container_name"]
+		target_label  = "aws_eks_container"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_container_id"]
+		target_label  = "aws_eks_container_id"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_namespace"]
+		target_label  = "aws_eks_namespace"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_environment"]
+		target_label  = "psy_environment"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_domain"]
+		target_label  = "psy_domain"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_application"]
+		target_label  = "psy_application"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_version"]
+		target_label  = "psy_version"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_batch_pipeline"]
+		target_label  = "psy_batch_pipeline"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_batch_job"]
+		target_label  = "psy_batch_job"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_batch_pipeline_execution_id"]
+		target_label  = "psy_batch_pipeline_execution_id"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_batch_job_execution_id"]
+		target_label  = "psy_batch_job_execution_id"
+	}
+
+	rule {
+		action        = "replace"
+		source_labels = ["__meta_kubernetes_pod_label_pyo_counting_io_batch_job_execution_id"]
+		target_label  = "psy_batch_job_execution_id"
+	}
+}
+
+local.file_match "pod_log" {
+	path_targets = discovery.relabel.pod_log.output
+	sync_period  = "10s"
+}
+
+loki.source.file "pod_log" {
+	targets    = local.file_match.pod_log.targets
+	forward_to = [loki.process.pod_log.receiver]
+}
+
+loki.process "pod_log" {
+	forward_to = [loki.echo.test.receiver]
+
+	stage.limit {
+		rate          = 1000
+		burst         = 1000
+		drop          = true
+		by_label_name = "job"
+	}
+
+	stage.cri { }
+
+	stage.static_labels {
+		values = {
+			aws_account    = "${aws_account}",
+			aws_account_id = "${aws_account_id}",
+			aws_eks        = "${cluster}",
+		}
+	}
+
+	stage.structured_metadata {
+		values = {
+			aws_eks_node                    = "",
+			aws_eks_namespace               = "",
+			aws_eks_pod                     = "",
+			aws_eks_container               = "",
+			aws_eks_container_id            = "",
+			psy_version                     = "",
+			psy_batch_pipeline_execution_id = "",
+			psy_batch_job_execution_id      = "",
+		}
+	}
+
+	stage.label_keep {
+		values = [
+			"aws_account",
+			"aws_account_id",
+			"aws_eks",
+			"aws_eks_namespace",
+			"psy_domain",
+			"psy_application",
+			"psy_environment",
+			"psy_batch_pipeline",
+			"psy_batch_job",
+			"job",
+		]
+	}
+}
+
+loki.write "loki" {
+	endpoint {
+		url               = "https://${loki_host}/loki/api/v1/push"
+		batch_wait        = "5s"
+		batch_size        = "1MiB"
+		tenant_id         = "pyo-counting"
+		retry_on_http_429 = true
+		enable_http2      = true
+		follow_redirects  = true
+
+		// queue_config {}
+	}
+	// wal {}
+}
+
+loki.echo "test" {}

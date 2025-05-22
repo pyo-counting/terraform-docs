@@ -484,15 +484,23 @@ resource "helm_release" "aws_load_balancer_controller" {
   depends_on = [module.eks]
 }
 
-resource "helm_release" "k8sgpt" {
+resource "kubectl_manifest" "alloy_ns" {
+  server_side_apply = true
+  wait              = true
+  yaml_body         = file("${path.module}/config/eks/alloy/1.0.3/manifest/ns.yaml")
+
+  depends_on = [module.eks]
+}
+
+resource "helm_release" "alloy" {
   # chart info
-  repository = "https://charts.k8sgpt.ai"
-  chart      = "k8sgpt-operator"
-  version    = "0.2.13"
+  repository = "https://grafana.github.io/helm-charts"
+  chart      = "alloy"
+  version    = "1.0.3"
   # deployment info
-  name             = "k8sgpt"
-  create_namespace = true
-  namespace        = "k8sgpt-ns"
+  name             = "alloy"
+  create_namespace = false
+  namespace        = "alloy-ns"
   max_history      = 2
   # install / update / rollback behavior
   atomic                = false
@@ -510,7 +518,15 @@ resource "helm_release" "k8sgpt" {
   wait                  = true
   wait_for_jobs         = true
   # chart custom values
-  values = [file("${path.module}/config/eks/k8sgpt/0.2.13/helm/values.yaml")]
+  values = [templatefile("${path.module}/config/eks/alloy/1.0.3/helm/values.yaml.tftpl", {
+    environment = local.environment,
+    alloy_config = indent(6, templatefile("${path.module}/config/eks/alloy/1.0.3/helm/config.alloy", {
+      aws_account    = "test"
+      aws_account_id = "test"
+      cluster        = module.eks.cluster_name
+      loki_host      = "loki.pyo-counting.services"
+    }))
+  })]
 
-  depends_on = [module.eks]
+  depends_on = [kubectl_manifest.alloy_ns]
 }
