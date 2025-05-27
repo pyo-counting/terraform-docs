@@ -520,7 +520,7 @@ resource "helm_release" "alloy" {
   # chart custom values
   values = [templatefile("${path.module}/config/eks/alloy/1.0.3/helm/values.yaml.tftpl", {
     environment = local.environment,
-    alloy_config = indent(6, templatefile("${path.module}/config/eks/alloy/1.0.3/helm/config.alloy", {
+    alloy_config = indent(6, templatefile("${path.module}/config/eks/alloy/1.0.3/helm/config.alloy.tftpl", {
       aws_account    = "test"
       aws_account_id = "test"
       cluster        = module.eks.cluster_name
