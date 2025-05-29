@@ -34,7 +34,7 @@ module "lambda" {
   # image_config_working_directory = ""
   ## vpc
   ipv6_allowed_for_dual_stack        = false
-  vpc_subnet_ids                     = [module.vpc.sbn_map["svr-a"].id, module.vpc.sbn_map["svr-c"].id]
+  vpc_subnet_ids                     = [module.vpc.private_subnets]
   vpc_security_group_ids             = [module.scg.scg_map["lambdapromtail"].id]
   replace_security_groups_on_destroy = false
   # replacement_security_group_ids     = []
