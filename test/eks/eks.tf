@@ -96,8 +96,8 @@ module "eks" {
       min_size                       = 2
       desired_size                   = 2
       max_size                       = 4
-      ami_type                       = "AL2_x86_64"
-      ami_release_version            = "1.32.0-20250203"
+      ami_type                       = "AL2023_x86_64_STANDARD"
+      ami_release_version            = "1.32.3-20250519"
       use_latest_ami_release_version = false
       capacity_type                  = "ON_DEMAND"
       force_update_version           = false
@@ -116,7 +116,10 @@ module "eks" {
         }
       }
       # user data
-      pre_bootstrap_user_data = file("${path.module}/config/ec2/al2-1.32.0-20250203-userdata.sh")
+      cloudinit_pre_nodeadm = [{
+        content_type = "text/x-shellscript; charset=\"us-ascii\""
+        content      = file("${path.module}/config/ec2/al2023-1.32.3-20250519-userdata.sh")
+      }]
       # launch template
       create_launch_template                 = true
       use_custom_launch_template             = true
@@ -277,12 +280,12 @@ resource "helm_release" "karpenter" {
 resource "kubectl_manifest" "karpenter_ec2nc_default" {
   server_side_apply = true
   wait              = true
-  yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/manifest/ec2nc-default.yaml.tftpl",
+  yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/manifest/ec2nc-al2023-1-32-3-20250519.yaml.tftpl",
     {
       subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
       security_group_id    = module.eks.node_security_group_id
       iam_instance_profile = module.iam_role.wrapper["eks_node_ec2"].iam_instance_profile_name
-      ami_alias            = "al2@v20250203"
+      ami_alias            = "al2023@v20250519"
       # metadata_options
       http_endpoint               = "enabled"
       http_put_response_hop_limit = 2
@@ -293,7 +296,7 @@ resource "kubectl_manifest" "karpenter_ec2nc_default" {
       encrypted             = true
       volume_size           = "20Gi"
       volume_type           = "gp3"
-      user_data             = indent(4, file("${path.module}/config/ec2/al2-1.32.0-20250203-userdata.sh"))
+      user_data             = indent(4, file("${path.module}/config/ec2/al2023-1.32.3-20250519-userdata.sh"))
       detailed_monitoring   = true
     }
   )

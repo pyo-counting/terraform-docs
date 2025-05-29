@@ -1,14 +1,14 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: nop-ondemand
+  name: nop-al2023-1-32-3-20250519-ondemand
 spec:
   template:
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: ec2nc-default
+        name: ec2nc-al2023-1-32-3-20250519
       taints:
         - key: node.pyo-counting.io/managed-by
           value: karpenter
