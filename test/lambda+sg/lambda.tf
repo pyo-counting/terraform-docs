@@ -1,3 +1,9 @@
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_file = "${path.module}/example-go/bootstrap"
+  output_path = "lambda.zip"
+}
+
 module "lambda" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "7.20.2"
@@ -11,9 +17,9 @@ module "lambda" {
   function_name          = format("%s-%s-%s-lambda", local.corp, local.environment, local.product)
   description            = "lambda"
   architectures          = ["arm64"]
-  ephemeral_storage_size = 32  # 32GB
+  ephemeral_storage_size = 512 # 512GB
   memory_size            = 256 # 256MB
-  timeout                = 60  # 60s
+  timeout                = 10  # 10s
   # provisioned_concurrent_executions = null
   # reserved_concurrent_executions    = null
   ## efs
@@ -24,9 +30,9 @@ module "lambda" {
   ### zip
   handler                 = "bootstrap"
   runtime                 = "provided.al2023"
-  local_existing_package  = file("${path.module}/myFunction.zip")
+  local_existing_package  = data.archive_file.lambda_zip.output_path
+  ignore_source_code_hash = false
   # snap_start              = null
-  # ignore_source_code_hash = null
   ### image
   # image_uri = ""
   # image_config_command           = []
@@ -34,21 +40,14 @@ module "lambda" {
   # image_config_working_directory = ""
   ## vpc
   ipv6_allowed_for_dual_stack        = false
-  vpc_subnet_ids                     = [module.vpc.private_subnets]
-  vpc_security_group_ids             = [module.scg.scg_map["lambdapromtail"].id]
+  vpc_subnet_ids                     = module.vpc.private_subnets
+  vpc_security_group_ids             = [module.sg_lambda.security_group_id]
   replace_security_groups_on_destroy = false
   # replacement_security_group_ids     = []
   ## env
   # kms_key_arn = ""
   environment_variables = {
-    WRITE_ADDRESS            = "https://promtail.kurlypay.services/loki/api/v1/push"
-    KEEP_STREAM              = "true"
-    BATCH_SIZE               = "65536" # 64KB
-    EXTRA_LABELS             = "aws_account,logarchive,aws_account_id,073877294291"
-    OMIT_EXTRA_LABELS_PREFIX = "true"
-    TENANT_ID                = "kurlypay"
-    SKIP_TLS_VERIFY          = "false"
-    PRINT_LOG_LINE           = "false"
+    RECEIPT_BUCKET = module.s3_bucket.s3_bucket_id
   }
   ## trace
   # tracing_mode = ""
@@ -63,24 +62,14 @@ module "lambda" {
   cloudwatch_logs_retention_in_days = 7 # 7d
   # lambda_at_edge_logs_all_regions = null
   # cloudwatch_logs_kms_key_id        = ""
-  cloudwatch_logs_tags = { Name = format("/aws/lambda/%s", "lambdapromtail") }
+  cloudwatch_logs_tags = { Name = format("/aws/lambda/%s", "lambda") }
   ## tags
   include_default_tag = true
-  function_tags       = { Name = format("%s-%s-%s-lambda-%s", local.corp, local.environment, local.product, "lambdapromtail") }
+  function_tags       = { Name = format("%s-%s-%s-lambda", local.corp, local.environment, local.product) }
   ## trigger invocation
   create_current_version_allowed_triggers   = true
   create_unqualified_alias_allowed_triggers = true
-  event_source_mapping = {
-    sqs = {
-      event_source_arn                   = module.sqs_lambdapromtail.queue_arn
-      batch_size                         = 2
-      maximum_batching_window_in_seconds = 5
-      function_response_types            = ["ReportBatchItemFailures"]
-      scaling_config = {
-        maximum_concurrency = 50
-      }
-    }
-  }
+  event_source_mapping                      = {}
   ## async invocation
   create_async_event_config = false
   # create_current_version_async_event_config   = true
@@ -104,22 +93,22 @@ module "lambda" {
   }
   ## role
   create_role      = true
-  role_name        = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "lambdapromtail")
-  role_description = "iam role for lambdapromtail"
+  role_name        = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "lambda")
+  role_description = "iam role for lambda"
   # role_path                          = ""
   # lambda_role                        = ""
   # role_permissions_boundary          = ""
   # role_maximum_session_duration      = null
   role_force_detach_policies         = true
-  policy_name                        = format("%s-%s-%s-policy-%s", local.corp, local.environment, local.product, "lambdapromtail")
+  policy_name                        = format("%s-%s-%s-policy-%s", local.corp, local.environment, local.product, "lambda")
   attach_async_event_policy          = false
   attach_cloudwatch_logs_policy      = true
   attach_create_log_group_permission = true
   attach_dead_letter_policy          = false
   attach_network_policy              = true
   attach_tracing_policy              = false
-  attach_policy                      = true
-  policy                             = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
+  attach_policy                      = false
+  policy                             = ""
   attach_policies                    = false
   policies                           = []
   attach_policy_json                 = false
@@ -130,14 +119,14 @@ module "lambda" {
   policy_statements = {
     s3 = {
       effect    = "Allow"
-      actions   = ["s3:GetObject"]
-      resources = ["${module.s3_bucket_lambdapromtail.s3_bucket_arn}/*"]
+      actions   = ["s3:PutObject"]
+      resources = ["${module.s3_bucket.s3_bucket_arn}/*"]
     }
   }
   # trusted_entities                   = []
   # policy_path                        = ""
   # assume_role_policy_statements      = {}
-  role_tags = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "lambdapromtail") }
+  role_tags = { Name = format("%s-%s-%s-role-%s", local.corp, local.environment, local.product, "lambda") }
   ## layer
   create_layer = false
   ## code signing
@@ -149,8 +138,8 @@ module "lambda" {
   ## sam
   create_sam_metadata = false
 
-  tags     = {}
   # timeouts = {}
+  tags = {}
 }
 
 # module "lambda_lambdapromtail" {
