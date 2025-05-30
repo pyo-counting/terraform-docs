@@ -244,7 +244,7 @@ discovery.relabel "pod_log" {
 
 	rule {
 		action        = "keep"
-		regex         = "([a-z-]+)_([a-z-]+)([a-z-_]+)"
+		regex         = "([a-z]+)_([a-z0-9-]+)([a-z0-9-_]*)"
 		source_labels = ["__meta_kubernetes_pod_label_loki_pyo_counting_io_job"]
 	}
 
@@ -261,7 +261,7 @@ discovery.relabel "pod_log" {
 
 	rule {
 		action        = "replace"
-		regex         = "([a-z-]+)_([a-z-]+)"
+		regex         = "([a-z]+)_([a-z0-9-]+)"
 		replacement   = "$1/$2"
 		source_labels = ["__meta_kubernetes_pod_label_loki_pyo_counting_io_job"]
 		target_label  = "job"
@@ -269,7 +269,7 @@ discovery.relabel "pod_log" {
 
 	rule {
 		action        = "replace"
-		regex         = "([a-z-]+)_([a-z-]+)_([a-z-]+)"
+		regex         = "([a-z]+)_([a-z0-9-]+)_([a-z0-9-]+)"
 		replacement   = "$1/$2/$3"
 		source_labels = ["__meta_kubernetes_pod_label_loki_pyo_counting_io_job"]
 		target_label  = "job"
@@ -277,7 +277,7 @@ discovery.relabel "pod_log" {
 
 	rule {
 		action        = "replace"
-		regex         = "([a-z-]+)_([a-z-]+)_([a-z-]+)_([a-z-]+)"
+		regex         = "([a-z]+)_([a-z0-9-]+)_([a-z0-9-]+)_([a-z0-9-]+)"
 		replacement   = "$1/$2/$3/$4"
 		source_labels = ["__meta_kubernetes_pod_label_loki_pyo_counting_io_job"]
 		target_label  = "job"

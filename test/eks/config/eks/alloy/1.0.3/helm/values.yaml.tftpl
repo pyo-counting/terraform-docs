@@ -108,7 +108,10 @@ alloy:
 
     # -- Extra volume mounts to add into the Grafana Alloy container. Does not
     # affect the watch container.
-    extra: []
+    extra:
+      - name: run
+        hostPath:
+          path: /run/alloy
 
   # -- Security context to apply to the Grafana Alloy container.
   securityContext: {}
@@ -372,7 +375,9 @@ controller:
 
   volumes:
     # -- Extra volumes to add to the Grafana Alloy pod.
-    extra: []
+    extra:
+      - name: run
+        mountPath: /tmp/alloy
 
   # -- volumeClaimTemplates to add when controller.type is 'statefulset'.
   volumeClaimTemplates: []
