@@ -277,7 +277,7 @@ resource "helm_release" "karpenter" {
   ]
 }
 
-resource "kubectl_manifest" "karpenter_ec2nc_default" {
+resource "kubectl_manifest" "karpenter_ec2nc_al2023_1_32_3_20250519" {
   server_side_apply = true
   wait              = true
   yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/manifest/ec2nc-al2023-1-32-3-20250519.yaml.tftpl",
@@ -307,14 +307,13 @@ resource "kubectl_manifest" "karpenter_ec2nc_default" {
   ]
 }
 
-resource "kubectl_manifest" "karpenter_nop" {
-  for_each = fileset("${path.module}/config/eks/karpenter/1.3.2/manifest", "nop-*.yaml")
+resource "kubectl_manifest" "karpenter_nop_al2023_1_32_3_20250519_ondemand" {
 
   server_side_apply = true
   wait              = true
-  yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/manifest/${each.key}")
+  yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/manifest/nop-al2023-1-32-3-20250519-ondemand.yaml")
 
-  depends_on = [kubectl_manifest.karpenter_ec2nc_default]
+  depends_on = [kubectl_manifest.karpenter_ec2nc_al2023_1_32_3_20250519]
 }
 
 resource "helm_release" "aws_efs_csi_driver" {
