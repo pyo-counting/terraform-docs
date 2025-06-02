@@ -189,12 +189,12 @@ module "lambda" {
 #   ## env
 #   # kms_key_arn = ""
 #   environment_variables = {
-#     WRITE_ADDRESS            = "https://promtail.kurlypay.services/loki/api/v1/push"
+#     WRITE_ADDRESS            = "https://promtail.pyo-counting.services/loki/api/v1/push"
 #     KEEP_STREAM              = "true"
 #     BATCH_SIZE               = "65536" # 64KB
 #     EXTRA_LABELS             = "aws_account,logarchive,aws_account_id,073877294291"
 #     OMIT_EXTRA_LABELS_PREFIX = "true"
-#     TENANT_ID                = "kurlypay"
+#     TENANT_ID                = "pyo-counting"
 #     SKIP_TLS_VERIFY          = "false"
 #     PRINT_LOG_LINE           = "false"
 #   }
