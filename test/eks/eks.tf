@@ -89,10 +89,10 @@ module "eks" {
     any = { type = "egress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"], description = "to any" }
   }
   eks_managed_node_groups = {
-    system = {
+    system_al_2023_1_32_3_20250519 = {
       # managed node group
       use_name_prefix                = true
-      name                           = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system")
+      name                           = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system-al-2023")
       min_size                       = 2
       desired_size                   = 2
       max_size                       = 4
@@ -124,7 +124,7 @@ module "eks" {
       create_launch_template                 = true
       use_custom_launch_template             = true
       launch_template_use_name_prefix        = true
-      launch_template_name                   = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system")
+      launch_template_name                   = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system-al-2023")
       launch_template_description            = "eks system managed node group launch template"
       update_launch_template_default_version = true
       enable_monitoring                      = true
@@ -154,8 +154,8 @@ module "eks" {
           }
         }
       }
-      tags                 = { Name = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system") }
-      launch_template_tags = { Name = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system") }
+      tags                 = { Name = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system-al-2023") }
+      launch_template_tags = { Name = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system-al-2023") }
     }
   }
 
