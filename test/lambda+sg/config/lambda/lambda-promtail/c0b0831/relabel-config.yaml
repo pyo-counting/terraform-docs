@@ -1,0 +1,138 @@
+# {__aws_log_type="s3_lb"}
+# ref: https://github.com/grafana/loki/blob/6e1547fe62403132d1453519a4750ce6746c86e8/tools/lambda-promtail/lambda-promtail/s3.go#L95
+- action: replace
+  source_labels:
+    - __aws_s3_lb
+  regex: (.+)
+  target_label: aws_elb
+
+# {__aws_log_type="s3_vpc_flow"}
+# ref: https://github.com/grafana/loki/blob/6e1547fe62403132d1453519a4750ce6746c86e8/tools/lambda-promtail/lambda-promtail/s3.go#L86
+- action: replace
+  source_labels:
+    - __aws_s3_vpc_flow
+  regex: (.+)
+  target_label: aws_vfl_id
+
+# {__aws_log_type="s3_cloudfront"}
+# ref: https://github.com/grafana/loki/blob/6e1547fe62403132d1453519a4750ce6746c86e8/tools/lambda-promtail/lambda-promtail/s3.go#L109
+- action: replace
+  source_labels:
+    - __aws_s3_cloudfront
+  regex: (.+)
+  target_label: aws_cf_id
+
+# {__aws_log_type="s3_waf"}
+# ref: https://github.com/grafana/loki/blob/6e1547fe62403132d1453519a4750ce6746c86e8/tools/lambda-promtail/lambda-promtail/s3.go#L118
+- action: replace
+  source_labels:
+    - __aws_s3_waf
+  regex: (.+)
+  target_label: aws_waf_acl
+
+# {__aws_log_type="cloudwatch", __aws_cloudwatch_log_group=~"/kps/batch/(.*)/(.*)/(.*)/(.*)"}
+# ref: https://github.com/grafana/loki/blob/main/tools/lambda-promtail/lambda-promtail/cw.go#L20
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+  regex: /kps/batch/(.*)/(.*)/(.*)/(.*)
+  replacement: $1
+  target_label: aws_batch
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+  regex: /kps/batch/(.*)/(.*)/(.*)/(.*)
+  replacement: $2
+  target_label: kps_environment
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+  regex: /kps/batch/(.*)/(.*)/(.*)/(.*)
+  replacement: $3
+  target_label: kps_domain
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+  regex: /kps/batch/(.*)/(.*)/(.*)/(.*)
+  replacement: $4
+  target_label: kps_application
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+  regex: /kps/batch/(.*)/(.*)/(.*)/(.*)
+  replacement: $2/$3/$4
+  target_label: job
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+    - __aws_cloudwatch_log_stream
+  regex: /kps/batch/(.*)/(.*)/(.*)/(.*);(.*)/default/(.*)
+  replacement: $5
+  target_label: kps_batch_job
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+    - __aws_cloudwatch_log_stream
+  regex: /kps/batch/(.*)/(.*)/(.*)/(.*);(.*)/default/(.*)
+  replacement: $6
+  target_label: kps_batch_job_execution_id
+
+# {__aws_log_type="cloudwatch", __aws_cloudwatch_log_group=~"/aws/eks/(.*)/cluster"}
+# ref: https://github.com/grafana/loki/blob/main/tools/lambda-promtail/lambda-promtail/cw.go#L20
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+  regex: /aws/eks/(.*)/cluster
+  replacement: $1
+  target_label: aws_eks
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+    - __aws_cloudwatch_log_stream
+  regex: /aws/eks/(.*)/cluster;kube-apiserver-.*
+  replacement: kube-apiserver
+  target_label: aws_eks_component
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+    - __aws_cloudwatch_log_stream
+  regex: /aws/eks/(.*)/cluster;authenticator-.*
+  replacement: aws-iam-authenticator
+  target_label: aws_eks_component
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+    - __aws_cloudwatch_log_stream
+  regex: /aws/eks/(.*)/cluster;kube-controller-manager-.*
+  replacement: kube-controller-manager
+  target_label: aws_eks_component
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+    - __aws_cloudwatch_log_stream
+  regex: /aws/eks/(.*)/cluster;kube-scheduler-.*
+  replacement: kube-scheduler
+  target_label: aws_eks_component
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+    - __aws_cloudwatch_log_stream
+  regex: /aws/eks/(.*)/cluster;cloud-controller-manager-.*
+  replacement: cloud-controller-manager
+  target_label: aws_eks_component
+# - action: replace
+#   source_labels:
+#     - __aws_cloudwatch_log_group
+#     - __aws_cloudwatch_log_stream
+#   regex: /aws/eks/(.*)/cluster;etcd-.*
+#   replacement: etcd
+#   target_label: aws_eks_component
+
+# {__aws_log_type="cloudwatch", __aws_cloudwatch_log_group=~"/kps/ssm/session-manager"}
+# ref: https://github.com/grafana/loki/blob/main/tools/lambda-promtail/lambda-promtail/cw.go#L20
+- action: replace
+  source_labels:
+    - __aws_cloudwatch_log_group
+  regex: /kps/ssm/session-manager
+  replacement: session-manager
+  target_label: aws_ssm

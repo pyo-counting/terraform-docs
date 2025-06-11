@@ -176,7 +176,7 @@ module "lambda" {
 #   # ignore_source_code_hash = null
 #   # local_existing_package  = ""
 #   ### image
-#   image_uri = "${data.terraform_remote_state.shr.outputs.ecr_wrapper["lambda_promtail"].repository_url}:main-ad279e5-arm64"
+#   image_uri = "${data.terraform_remote_state.shr.outputs.ecr_wrapper["lambda_promtail"].repository_url}:main-c0b0831-arm64"
 #   # image_config_command           = []
 #   # image_config_entry_point       = []
 #   # image_config_working_directory = ""
@@ -189,7 +189,7 @@ module "lambda" {
 #   ## env
 #   # kms_key_arn = ""
 #   environment_variables = {
-#     WRITE_ADDRESS            = "https://promtail.pyo-counting.services/loki/api/v1/push"
+#     WRITE_ADDRESS            = "https://alloy.pyo-counting.services/loki/api/v1/push"
 #     KEEP_STREAM              = "true"
 #     BATCH_SIZE               = "65536" # 64KB
 #     EXTRA_LABELS             = "aws_account,logarchive,aws_account_id,073877294291"
@@ -197,6 +197,7 @@ module "lambda" {
 #     TENANT_ID                = "pyo-counting"
 #     SKIP_TLS_VERIFY          = "false"
 #     PRINT_LOG_LINE           = "false"
+# RELABEL_CONFIGS          = jsonencode(yamldecode(file("${path.module}/config/lambda/lambda-promtail/c0b0831/relabel-config.yaml")))
 #   }
 #   ## trace
 #   # tracing_mode = ""
