@@ -494,13 +494,13 @@ resource "kubectl_manifest" "alloy_ns" {
   depends_on = [module.eks]
 }
 
-resource "helm_release" "alloy" {
+resource "helm_release" "alloy_node" {
   # chart info
   repository = "https://grafana.github.io/helm-charts"
   chart      = "alloy"
   version    = "1.0.3"
   # deployment info
-  name             = "alloy"
+  name             = "alloy-node"
   create_namespace = false
   namespace        = "alloy-ns"
   max_history      = 2
@@ -520,9 +520,9 @@ resource "helm_release" "alloy" {
   wait                  = true
   wait_for_jobs         = true
   # chart custom values
-  values = [templatefile("${path.module}/config/eks/alloy/1.0.3/helm/values.yaml.tftpl", {
+  values = [templatefile("${path.module}/config/eks/alloy/1.0.3/helm/values-node.yaml.tftpl", {
     environment = local.environment,
-    alloy_config = indent(6, templatefile("${path.module}/config/eks/alloy/1.0.3/helm/config.alloy.tftpl", {
+    alloy_config = indent(6, templatefile("${path.module}/config/eks/alloy/1.0.3/helm/config-node.alloy.tftpl", {
       aws_account    = "test"
       aws_account_id = "test"
       cluster        = module.eks.cluster_name
