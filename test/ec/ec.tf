@@ -14,8 +14,8 @@ module "ec" {
   cluster_mode                              = "enabled"
   cluster_mode_enabled                      = true
   num_node_groups                           = 1 # valid when cluster mode enabled
-  replicas_per_node_group                   = 0 # valid when cluster mode enabled(min 2, when automatic_failover_enabled or multi_az_enabled is true)
-  # num_cache_clusters                        = 2 # valid when cluster mode disabled
+  replicas_per_node_group                   = 0 # valid when cluster mode enabled
+  # num_cache_clusters                        = 2 # valid when cluster mode disabled(min 2, when automatic_failover_enabled or multi_az_enabled is true)
   automatic_failover_enabled = false # muste be true when cluster mode enabled or multi az enabled
   multi_az_enabled           = false
   # preferred_cache_cluster_azs = ["${local.region}a", "${local.region}c"] # valid when cluster mode disabled
@@ -24,9 +24,18 @@ module "ec" {
   description          = "ec valkey replication group"
   tags                 = { Name = format("%s-%s-%s-ec-valkey", local.corp, local.environment, local.product) }
   log_delivery_configuration = {
-    defaults = {
-      create_cloudwatch_log_group = true
+    engine_log = {
+      destination_type                       = "cloudwatch-logs"
+      create_cloudwatch_log_group            = true
+      cloudwatch_log_group_name              = format("%s-%s-%s-ec-valkey", local.corp, local.environment, local.product)
+      cloudwatch_log_group_retention_in_days = 7
+      log_format                             = "json"
+      log_type                               = "engine-log"
+    }
+    slow_log = {
       destination_type            = "cloudwatch-logs"
+      create_cloudwatch_log_group = false
+      destination                 = "/aws/elasticache/${format("%s-%s-%s-ec-valkey", local.corp, local.environment, local.product)}"
       log_format                  = "json"
       log_type                    = "slow-log"
     }
