@@ -89,10 +89,10 @@ module "eks" {
     any = { type = "egress", from_port = 0, to_port = 0, protocol = "-1", cidr_blocks = ["0.0.0.0/0"], description = "to any" }
   }
   eks_managed_node_groups = {
-    system_al_2023_1_32_3_20250519 = {
+    al_2023_1_32_3_20250519 = {
       # managed node group
       use_name_prefix                = true
-      name                           = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system-al-2023")
+      name                           = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "al-2023")
       min_size                       = 2
       desired_size                   = 2
       max_size                       = 4
@@ -124,8 +124,8 @@ module "eks" {
       create_launch_template                 = true
       use_custom_launch_template             = true
       launch_template_use_name_prefix        = true
-      launch_template_name                   = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system-al-2023")
-      launch_template_description            = "eks system managed node group launch template"
+      launch_template_name                   = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "al-2023")
+      launch_template_description            = "eks managed node group launch template"
       update_launch_template_default_version = true
       enable_monitoring                      = true
       # eks node iam role
@@ -154,8 +154,8 @@ module "eks" {
           }
         }
       }
-      tags                 = { Name = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "system-al-2023") }
-      launch_template_tags = { Name = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "system-al-2023") }
+      tags                 = { Name = format("%s-%s-%s-eks-ng-%s", local.corp, local.environment, local.product, "al-2023") }
+      launch_template_tags = { Name = format("%s-%s-%s-lt-%s", local.corp, local.environment, local.product, "al-2023") }
     }
   }
 
@@ -172,363 +172,363 @@ module "eks" {
   ]
 }
 
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "20.33.1"
+# module "karpenter" {
+#   source  = "terraform-aws-modules/eks/aws//modules/karpenter"
+#   version = "20.33.1"
 
-  create              = true
-  create_access_entry = false
-  cluster_name        = module.eks.cluster_name
-  # spot instance interruption handler config
-  enable_spot_termination   = true
-  queue_name                = format("%s-%s-%s-sqs-karpenter", local.corp, local.environment, local.product)
-  queue_managed_sse_enabled = true
-  # node iam role
-  create_node_iam_role    = false
-  create_instance_profile = false
-  node_iam_role_arn       = module.iam_role.wrapper["eks_node_ec2"].iam_role_arn
-  # karpenter pod iam role
-  create_iam_role                 = true
-  enable_irsa                     = true
-  enable_pod_identity             = false
-  enable_v1_permissions           = true
-  iam_policy_name                 = format("%s-%s-%s-policy-karpenter", local.corp, local.environment, local.product)
-  iam_policy_use_name_prefix      = true
-  iam_policy_description          = "iam policy for karpenter irsa"
-  iam_role_name                   = format("%s-%s-%s-role-karpenter", local.corp, local.environment, local.product)
-  iam_role_use_name_prefix        = false
-  iam_role_description            = "iam role for karpenter irsa"
-  iam_role_tags                   = { Name = format("%s-%s-%s-role-karpenter", local.corp, local.environment, local.product) }
-  irsa_namespace_service_accounts = ["kube-system:karpenter-sa"]
-  irsa_oidc_provider_arn          = module.eks.oidc_provider_arn
-}
+#   create              = true
+#   create_access_entry = false
+#   cluster_name        = module.eks.cluster_name
+#   # spot instance interruption handler config
+#   enable_spot_termination   = true
+#   queue_name                = format("%s-%s-%s-sqs-karpenter", local.corp, local.environment, local.product)
+#   queue_managed_sse_enabled = true
+#   # node iam role
+#   create_node_iam_role    = false
+#   create_instance_profile = false
+#   node_iam_role_arn       = module.iam_role.wrapper["eks_node_ec2"].iam_role_arn
+#   # karpenter pod iam role
+#   create_iam_role                 = true
+#   enable_irsa                     = true
+#   enable_pod_identity             = false
+#   enable_v1_permissions           = true
+#   iam_policy_name                 = format("%s-%s-%s-policy-karpenter", local.corp, local.environment, local.product)
+#   iam_policy_use_name_prefix      = true
+#   iam_policy_description          = "iam policy for karpenter irsa"
+#   iam_role_name                   = format("%s-%s-%s-role-karpenter", local.corp, local.environment, local.product)
+#   iam_role_use_name_prefix        = false
+#   iam_role_description            = "iam role for karpenter irsa"
+#   iam_role_tags                   = { Name = format("%s-%s-%s-role-karpenter", local.corp, local.environment, local.product) }
+#   irsa_namespace_service_accounts = ["kube-system:karpenter-sa"]
+#   irsa_oidc_provider_arn          = module.eks.oidc_provider_arn
+# }
 
-resource "helm_release" "karpenter_crd" {
-  # chart info
-  repository = "oci://public.ecr.aws/karpenter"
-  chart      = "karpenter-crd"
-  version    = "1.3.2"
-  # deployment info
-  name             = "karpenter-crd"
-  create_namespace = false
-  namespace        = "kube-system"
-  max_history      = 2
-  # install / update / rollback behavior
-  atomic                = false
-  cleanup_on_fail       = false
-  dependency_update     = true
-  force_update          = false
-  recreate_pods         = false
-  replace               = false
-  render_subchart_notes = true
-  reset_values          = false
-  reuse_values          = false
-  skip_crds             = false
-  timeout               = 300 # 5m
-  upgrade_install       = false
-  wait                  = true
-  wait_for_jobs         = true
-  # chart custom values
-  values = []
+# resource "helm_release" "karpenter_crd" {
+#   # chart info
+#   repository = "oci://public.ecr.aws/karpenter"
+#   chart      = "karpenter-crd"
+#   version    = "1.3.2"
+#   # deployment info
+#   name             = "karpenter-crd"
+#   create_namespace = false
+#   namespace        = "kube-system"
+#   max_history      = 2
+#   # install / update / rollback behavior
+#   atomic                = false
+#   cleanup_on_fail       = false
+#   dependency_update     = true
+#   force_update          = false
+#   recreate_pods         = false
+#   replace               = false
+#   render_subchart_notes = true
+#   reset_values          = false
+#   reuse_values          = false
+#   skip_crds             = false
+#   timeout               = 300 # 5m
+#   upgrade_install       = false
+#   wait                  = true
+#   wait_for_jobs         = true
+#   # chart custom values
+#   values = []
 
-  depends_on = [module.eks]
-}
+#   depends_on = [module.eks]
+# }
 
-resource "helm_release" "karpenter" {
-  # chart info
-  repository = "oci://public.ecr.aws/karpenter"
-  chart      = "karpenter"
-  version    = "1.3.2"
-  # deployment info
-  name             = "karpenter"
-  create_namespace = false
-  namespace        = "kube-system"
-  max_history      = 2
-  # install / update / rollback behavior
-  atomic                = false
-  cleanup_on_fail       = false
-  dependency_update     = true
-  force_update          = false
-  recreate_pods         = false
-  replace               = false
-  render_subchart_notes = true
-  reset_values          = false
-  reuse_values          = false
-  skip_crds             = true
-  timeout               = 300 # 5m
-  upgrade_install       = false
-  wait                  = true
-  wait_for_jobs         = true
-  # chart custom values
-  values = [templatefile("${path.module}/config/eks/karpenter/1.3.2/helm/values.yaml.tftpl",
-    {
-      environment      = local.environment
-      cluster          = module.eks.cluster_name
-      cluster_endpoint = module.eks.cluster_endpoint
-      sqs              = module.karpenter.queue_name
-      iam_irsa_arn     = module.karpenter.iam_role_arn
-      service_account  = "karpenter-sa"
-    }
-  )]
+# resource "helm_release" "karpenter" {
+#   # chart info
+#   repository = "oci://public.ecr.aws/karpenter"
+#   chart      = "karpenter"
+#   version    = "1.3.2"
+#   # deployment info
+#   name             = "karpenter"
+#   create_namespace = false
+#   namespace        = "kube-system"
+#   max_history      = 2
+#   # install / update / rollback behavior
+#   atomic                = false
+#   cleanup_on_fail       = false
+#   dependency_update     = true
+#   force_update          = false
+#   recreate_pods         = false
+#   replace               = false
+#   render_subchart_notes = true
+#   reset_values          = false
+#   reuse_values          = false
+#   skip_crds             = true
+#   timeout               = 300 # 5m
+#   upgrade_install       = false
+#   wait                  = true
+#   wait_for_jobs         = true
+#   # chart custom values
+#   values = [templatefile("${path.module}/config/eks/karpenter/1.3.2/helm/values.yaml.tftpl",
+#     {
+#       environment      = local.environment
+#       cluster          = module.eks.cluster_name
+#       cluster_endpoint = module.eks.cluster_endpoint
+#       sqs              = module.karpenter.queue_name
+#       iam_irsa_arn     = module.karpenter.iam_role_arn
+#       service_account  = "karpenter-sa"
+#     }
+#   )]
 
-  depends_on = [
-    module.eks,
-    module.karpenter
-  ]
-}
+#   depends_on = [
+#     module.eks,
+#     module.karpenter
+#   ]
+# }
 
-resource "kubectl_manifest" "karpenter_ec2nc_al2023_1_32_3_20250519" {
-  server_side_apply = true
-  wait              = true
-  yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/manifest/ec2nc-al2023-1-32-3-20250519.yaml.tftpl",
-    {
-      subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
-      security_group_id    = module.eks.node_security_group_id
-      iam_instance_profile = module.iam_role.wrapper["eks_node_ec2"].iam_instance_profile_name
-      ami_alias            = "al2023@v20250519"
-      # metadata_options
-      http_endpoint               = "enabled"
-      http_put_response_hop_limit = 2
-      http_tokens                 = "required"
-      # block_device_mappings
-      device_name           = "/dev/xvda"
-      delete_on_termination = true
-      encrypted             = true
-      volume_size           = "20Gi"
-      volume_type           = "gp3"
-      user_data             = indent(4, file("${path.module}/config/ec2/al2023-1.32.3-20250519-userdata.sh"))
-      detailed_monitoring   = true
-    }
-  )
+# resource "kubectl_manifest" "karpenter_ec2nc_al2023_1_32_3_20250519" {
+#   server_side_apply = true
+#   wait              = true
+#   yaml_body = templatefile("${path.module}/config/eks/karpenter/1.3.2/manifest/ec2nc-al2023-1-32-3-20250519.yaml.tftpl",
+#     {
+#       subnet_ids           = [aws_subnet.main["pri_1"].id, aws_subnet.main["pri_2"].id]
+#       security_group_id    = module.eks.node_security_group_id
+#       iam_instance_profile = module.iam_role.wrapper["eks_node_ec2"].iam_instance_profile_name
+#       ami_alias            = "al2023@v20250519"
+#       # metadata_options
+#       http_endpoint               = "enabled"
+#       http_put_response_hop_limit = 2
+#       http_tokens                 = "required"
+#       # block_device_mappings
+#       device_name           = "/dev/xvda"
+#       delete_on_termination = true
+#       encrypted             = true
+#       volume_size           = "20Gi"
+#       volume_type           = "gp3"
+#       user_data             = indent(4, file("${path.module}/config/ec2/al2023-1.32.3-20250519-userdata.sh"))
+#       detailed_monitoring   = true
+#     }
+#   )
 
-  depends_on = [
-    helm_release.karpenter_crd,
-    helm_release.karpenter
-  ]
-}
+#   depends_on = [
+#     helm_release.karpenter_crd,
+#     helm_release.karpenter
+#   ]
+# }
 
-resource "kubectl_manifest" "karpenter_nop_al2023_1_32_3_20250519_ondemand" {
+# resource "kubectl_manifest" "karpenter_nop_al2023_1_32_3_20250519_ondemand" {
 
-  server_side_apply = true
-  wait              = true
-  yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/manifest/nop-al2023-1-32-3-20250519-ondemand.yaml")
+#   server_side_apply = true
+#   wait              = true
+#   yaml_body         = file("${path.module}/config/eks/karpenter/1.3.2/manifest/nop-al2023-1-32-3-20250519-ondemand.yaml")
 
-  depends_on = [kubectl_manifest.karpenter_ec2nc_al2023_1_32_3_20250519]
-}
+#   depends_on = [kubectl_manifest.karpenter_ec2nc_al2023_1_32_3_20250519]
+# }
 
-resource "helm_release" "aws_efs_csi_driver" {
-  # chart info
-  repository = "https://kubernetes-sigs.github.io/aws-efs-csi-driver/"
-  chart      = "aws-efs-csi-driver"
-  version    = "3.1.7"
-  # deployment info
-  name             = "aws-efs-csi-driver"
-  create_namespace = false
-  namespace        = "kube-system"
-  max_history      = 2
-  # install / update / rollback behavior
-  atomic                = false
-  cleanup_on_fail       = false
-  dependency_update     = true
-  force_update          = false
-  recreate_pods         = false
-  replace               = false
-  render_subchart_notes = true
-  reset_values          = false
-  reuse_values          = false
-  skip_crds             = true
-  timeout               = 300 # 5m
-  upgrade_install       = false
-  wait                  = true
-  wait_for_jobs         = true
-  # chart custom values
-  values = [templatefile("${path.module}/config/eks/aws-efs-csi-driver/3.1.7/helm/values.yaml.tftpl",
-    {
-      #  controller pod
-      controller_iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_efs_csi"].iam_role_arn
-      controller_service_account = "efs-csi-controller-sa"
-      # node pod
-      node_iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_efs_csi"].iam_role_arn
-      node_service_account = "efs-csi-node-sa"
-    }
-  )]
+# resource "helm_release" "aws_efs_csi_driver" {
+#   # chart info
+#   repository = "https://kubernetes-sigs.github.io/aws-efs-csi-driver/"
+#   chart      = "aws-efs-csi-driver"
+#   version    = "3.1.7"
+#   # deployment info
+#   name             = "aws-efs-csi-driver"
+#   create_namespace = false
+#   namespace        = "kube-system"
+#   max_history      = 2
+#   # install / update / rollback behavior
+#   atomic                = false
+#   cleanup_on_fail       = false
+#   dependency_update     = true
+#   force_update          = false
+#   recreate_pods         = false
+#   replace               = false
+#   render_subchart_notes = true
+#   reset_values          = false
+#   reuse_values          = false
+#   skip_crds             = true
+#   timeout               = 300 # 5m
+#   upgrade_install       = false
+#   wait                  = true
+#   wait_for_jobs         = true
+#   # chart custom values
+#   values = [templatefile("${path.module}/config/eks/aws-efs-csi-driver/3.1.7/helm/values.yaml.tftpl",
+#     {
+#       #  controller pod
+#       controller_iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_efs_csi"].iam_role_arn
+#       controller_service_account = "efs-csi-controller-sa"
+#       # node pod
+#       node_iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_efs_csi"].iam_role_arn
+#       node_service_account = "efs-csi-node-sa"
+#     }
+#   )]
 
-  depends_on = [module.eks]
-}
+#   depends_on = [module.eks]
+# }
 
-resource "helm_release" "metrics_server" {
-  # chart info
-  repository = "https://kubernetes-sigs.github.io/metrics-server/"
-  chart      = "metrics-server"
-  version    = "3.12.2"
-  # deployment info
-  name             = "metrics-server"
-  create_namespace = false
-  namespace        = "kube-system"
-  max_history      = 2
-  # install / update / rollback behavior
-  atomic                = false
-  cleanup_on_fail       = false
-  dependency_update     = true
-  force_update          = false
-  recreate_pods         = false
-  replace               = false
-  render_subchart_notes = true
-  reset_values          = false
-  reuse_values          = false
-  skip_crds             = true
-  timeout               = 300 # 5m
-  upgrade_install       = false
-  wait                  = true
-  wait_for_jobs         = true
-  # chart custom values
-  values = [file("${path.module}/config/eks/metrics-server/0.7.2/helm/values.yaml")]
+# resource "helm_release" "metrics_server" {
+#   # chart info
+#   repository = "https://kubernetes-sigs.github.io/metrics-server/"
+#   chart      = "metrics-server"
+#   version    = "3.12.2"
+#   # deployment info
+#   name             = "metrics-server"
+#   create_namespace = false
+#   namespace        = "kube-system"
+#   max_history      = 2
+#   # install / update / rollback behavior
+#   atomic                = false
+#   cleanup_on_fail       = false
+#   dependency_update     = true
+#   force_update          = false
+#   recreate_pods         = false
+#   replace               = false
+#   render_subchart_notes = true
+#   reset_values          = false
+#   reuse_values          = false
+#   skip_crds             = true
+#   timeout               = 300 # 5m
+#   upgrade_install       = false
+#   wait                  = true
+#   wait_for_jobs         = true
+#   # chart custom values
+#   values = [file("${path.module}/config/eks/metrics-server/0.7.2/helm/values.yaml")]
 
-  depends_on = [module.eks]
-}
+#   depends_on = [module.eks]
+# }
 
-resource "helm_release" "secrets_store_csi_driver" {
-  # chart info
-  repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
-  chart      = "secrets-store-csi-driver"
-  version    = "1.4.8"
-  # deployment info
-  name             = "secrets-store-csi-driver"
-  create_namespace = false
-  namespace        = "kube-system"
-  max_history      = 2
-  # install / update / rollback behavior
-  atomic                = false
-  cleanup_on_fail       = false
-  dependency_update     = true
-  force_update          = false
-  recreate_pods         = false
-  replace               = false
-  render_subchart_notes = true
-  reset_values          = false
-  reuse_values          = false
-  skip_crds             = false
-  timeout               = 300 # 5m
-  upgrade_install       = false
-  wait                  = true
-  wait_for_jobs         = true
-  # chart custom values
-  values = [file("${path.module}/config/eks/secrets-store-csi-driver/1.4.8/helm/values.yaml")]
+# resource "helm_release" "secrets_store_csi_driver" {
+#   # chart info
+#   repository = "https://kubernetes-sigs.github.io/secrets-store-csi-driver/charts"
+#   chart      = "secrets-store-csi-driver"
+#   version    = "1.4.8"
+#   # deployment info
+#   name             = "secrets-store-csi-driver"
+#   create_namespace = false
+#   namespace        = "kube-system"
+#   max_history      = 2
+#   # install / update / rollback behavior
+#   atomic                = false
+#   cleanup_on_fail       = false
+#   dependency_update     = true
+#   force_update          = false
+#   recreate_pods         = false
+#   replace               = false
+#   render_subchart_notes = true
+#   reset_values          = false
+#   reuse_values          = false
+#   skip_crds             = false
+#   timeout               = 300 # 5m
+#   upgrade_install       = false
+#   wait                  = true
+#   wait_for_jobs         = true
+#   # chart custom values
+#   values = [file("${path.module}/config/eks/secrets-store-csi-driver/1.4.8/helm/values.yaml")]
 
-  depends_on = [module.eks]
-}
+#   depends_on = [module.eks]
+# }
 
-resource "helm_release" "secrets_store_csi_driver_provider_aws" {
-  # chart info
-  repository = "https://aws.github.io/secrets-store-csi-driver-provider-aws"
-  chart      = "secrets-store-csi-driver-provider-aws"
-  version    = "0.3.10"
-  # deployment info
-  name             = "secrets-store-csi-driver-provider-aws"
-  create_namespace = false
-  namespace        = "kube-system"
-  max_history      = 2
-  # install / update / rollback behavior
-  atomic                = false
-  cleanup_on_fail       = false
-  dependency_update     = true
-  force_update          = false
-  recreate_pods         = false
-  replace               = false
-  render_subchart_notes = true
-  reset_values          = false
-  reuse_values          = false
-  skip_crds             = false
-  timeout               = 300 # 5m
-  upgrade_install       = false
-  wait                  = true
-  wait_for_jobs         = true
-  # chart custom values
-  values = [file("${path.module}/config/eks/secrets-store-csi-driver-provider-aws/0.3.10/helm/values.yaml")]
+# resource "helm_release" "secrets_store_csi_driver_provider_aws" {
+#   # chart info
+#   repository = "https://aws.github.io/secrets-store-csi-driver-provider-aws"
+#   chart      = "secrets-store-csi-driver-provider-aws"
+#   version    = "0.3.10"
+#   # deployment info
+#   name             = "secrets-store-csi-driver-provider-aws"
+#   create_namespace = false
+#   namespace        = "kube-system"
+#   max_history      = 2
+#   # install / update / rollback behavior
+#   atomic                = false
+#   cleanup_on_fail       = false
+#   dependency_update     = true
+#   force_update          = false
+#   recreate_pods         = false
+#   replace               = false
+#   render_subchart_notes = true
+#   reset_values          = false
+#   reuse_values          = false
+#   skip_crds             = false
+#   timeout               = 300 # 5m
+#   upgrade_install       = false
+#   wait                  = true
+#   wait_for_jobs         = true
+#   # chart custom values
+#   values = [file("${path.module}/config/eks/secrets-store-csi-driver-provider-aws/0.3.10/helm/values.yaml")]
 
-  depends_on = [helm_release.secrets_store_csi_driver]
-}
+#   depends_on = [helm_release.secrets_store_csi_driver]
+# }
 
-resource "helm_release" "aws_load_balancer_controller" {
-  # chart info
-  repository = "https://aws.github.io/eks-charts"
-  chart      = "aws-load-balancer-controller"
-  version    = "1.7.2"
-  # deployment info
-  name             = "aws-load-balancer-controller"
-  create_namespace = false
-  namespace        = "kube-system"
-  max_history      = 2
-  # install / update / rollback behavior
-  atomic                = false
-  cleanup_on_fail       = false
-  dependency_update     = true
-  force_update          = false
-  recreate_pods         = false
-  replace               = false
-  render_subchart_notes = true
-  reset_values          = false
-  reuse_values          = false
-  skip_crds             = false
-  timeout               = 300 # 5m
-  upgrade_install       = false
-  wait                  = true
-  wait_for_jobs         = true
-  # chart custom values
-  values = [templatefile("${path.module}/config/eks/aws-load-balancer-controller/1.7.2/helm/values.yaml.tftpl",
-    {
-      cluster         = module.eks.cluster_name
-      service_account = "aws-load-balancer-controller-sa"
-      iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_load_balancer"].iam_role_arn
-    }
-  )]
+# resource "helm_release" "aws_load_balancer_controller" {
+#   # chart info
+#   repository = "https://aws.github.io/eks-charts"
+#   chart      = "aws-load-balancer-controller"
+#   version    = "1.7.2"
+#   # deployment info
+#   name             = "aws-load-balancer-controller"
+#   create_namespace = false
+#   namespace        = "kube-system"
+#   max_history      = 2
+#   # install / update / rollback behavior
+#   atomic                = false
+#   cleanup_on_fail       = false
+#   dependency_update     = true
+#   force_update          = false
+#   recreate_pods         = false
+#   replace               = false
+#   render_subchart_notes = true
+#   reset_values          = false
+#   reuse_values          = false
+#   skip_crds             = false
+#   timeout               = 300 # 5m
+#   upgrade_install       = false
+#   wait                  = true
+#   wait_for_jobs         = true
+#   # chart custom values
+#   values = [templatefile("${path.module}/config/eks/aws-load-balancer-controller/1.7.2/helm/values.yaml.tftpl",
+#     {
+#       cluster         = module.eks.cluster_name
+#       service_account = "aws-load-balancer-controller-sa"
+#       iam_irsa_arn    = module.iam_role_with_eks_oidc_system.wrapper["aws_load_balancer"].iam_role_arn
+#     }
+#   )]
 
-  depends_on = [module.eks]
-}
+#   depends_on = [module.eks]
+# }
 
-resource "kubectl_manifest" "alloy_ns" {
-  server_side_apply = true
-  wait              = true
-  yaml_body         = file("${path.module}/config/eks/alloy/1.0.3/manifest/ns.yaml")
+# resource "kubectl_manifest" "alloy_ns" {
+#   server_side_apply = true
+#   wait              = true
+#   yaml_body         = file("${path.module}/config/eks/alloy/1.0.3/manifest/ns.yaml")
 
-  depends_on = [module.eks]
-}
+#   depends_on = [module.eks]
+# }
 
-resource "helm_release" "alloy_node" {
-  # chart info
-  repository = "https://grafana.github.io/helm-charts"
-  chart      = "alloy"
-  version    = "1.0.3"
-  # deployment info
-  name             = "alloy-node"
-  create_namespace = false
-  namespace        = "alloy-ns"
-  max_history      = 2
-  # install / update / rollback behavior
-  atomic                = false
-  cleanup_on_fail       = false
-  dependency_update     = true
-  force_update          = false
-  recreate_pods         = false
-  replace               = false
-  render_subchart_notes = true
-  reset_values          = false
-  reuse_values          = false
-  skip_crds             = false
-  timeout               = 300 # 5m
-  upgrade_install       = false
-  wait                  = true
-  wait_for_jobs         = true
-  # chart custom values
-  values = [templatefile("${path.module}/config/eks/alloy/1.0.3/helm/values-node.yaml.tftpl", {
-    environment = local.environment,
-    alloy_config = indent(6, templatefile("${path.module}/config/eks/alloy/1.0.3/helm/config-node.alloy.tftpl", {
-      aws_account    = "test"
-      aws_account_id = "test"
-      cluster        = module.eks.cluster_name
-      loki_host      = "loki.pyo-counting.services"
-    }))
-  })]
+# resource "helm_release" "alloy_node" {
+#   # chart info
+#   repository = "https://grafana.github.io/helm-charts"
+#   chart      = "alloy"
+#   version    = "1.0.3"
+#   # deployment info
+#   name             = "alloy-node"
+#   create_namespace = false
+#   namespace        = "alloy-ns"
+#   max_history      = 2
+#   # install / update / rollback behavior
+#   atomic                = false
+#   cleanup_on_fail       = false
+#   dependency_update     = true
+#   force_update          = false
+#   recreate_pods         = false
+#   replace               = false
+#   render_subchart_notes = true
+#   reset_values          = false
+#   reuse_values          = false
+#   skip_crds             = false
+#   timeout               = 300 # 5m
+#   upgrade_install       = false
+#   wait                  = true
+#   wait_for_jobs         = true
+#   # chart custom values
+#   values = [templatefile("${path.module}/config/eks/alloy/1.0.3/helm/values-node.yaml.tftpl", {
+#     environment = local.environment,
+#     alloy_config = indent(6, templatefile("${path.module}/config/eks/alloy/1.0.3/helm/config-node.alloy.tftpl", {
+#       aws_account    = "test"
+#       aws_account_id = "test"
+#       cluster        = module.eks.cluster_name
+#       loki_host      = "loki.pyo-counting.services"
+#     }))
+#   })]
 
-  depends_on = [kubectl_manifest.alloy_ns]
-}
+#   depends_on = [kubectl_manifest.alloy_ns]
+# }
