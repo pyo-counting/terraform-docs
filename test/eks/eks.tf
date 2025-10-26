@@ -101,7 +101,7 @@ module "eks" {
       use_latest_ami_release_version = false
       capacity_type                  = "ON_DEMAND"
       force_update_version           = false
-      instance_types                 = ["t3.large"]
+      instance_types                 = ["t3.small"]
       labels                         = {}
       taints = {
         managed_by = {
@@ -485,6 +485,40 @@ module "eks" {
 
 #   depends_on = [module.eks]
 # }
+
+resource "helm_release" "crossplane" {
+  # chart info
+  repository = "https://charts.crossplane.io/stable"
+  chart      = "crossplane"
+  version    = "2.0.2"
+  # deployment info
+  name             = "crossplane"
+  create_namespace = true
+  namespace        = "crossplane-ns"
+  max_history      = 2
+  # install / update / rollback behavior
+  atomic                = false
+  cleanup_on_fail       = false
+  dependency_update     = true
+  force_update          = false
+  recreate_pods         = false
+  replace               = false
+  render_subchart_notes = true
+  reset_values          = false
+  reuse_values          = false
+  skip_crds             = true
+  timeout               = 300 # 5m
+  upgrade_install       = false
+  wait                  = true
+  wait_for_jobs         = true
+  # chart custom values
+  values = [templatefile("${path.module}/config/eks/crossplane/2.1.0-rc.0.134.g178aa84cc/helm/values.yaml.tftpl",
+    {
+      environment = local.environment
+    }
+  )]
+  depends_on = [module.eks]
+}
 
 # resource "kubectl_manifest" "alloy_ns" {
 #   server_side_apply = true

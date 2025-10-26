@@ -1,7 +1,7 @@
 locals {
   # provider
   region  = "ap-northeast-2"
-  profile = "playground"
+  profile = "pyoseyeol"
 
   corp        = "psy"
   environment = "playground"

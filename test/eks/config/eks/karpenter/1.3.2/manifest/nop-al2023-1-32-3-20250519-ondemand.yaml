@@ -33,6 +33,9 @@ spec:
           - key: "karpenter.k8s.aws/instance-generation"
             operator: Gt
             values: ["2"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["small"]
           - key: "karpenter.k8s.aws/instance-cpu-manufacturer"
             operator: In
             values: ["intel"]
